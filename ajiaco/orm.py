@@ -251,9 +251,10 @@ class Model:
         parameters = []
         for field_name, field_type in conf.fields:
             optional = False
-
+            field_help = None
             if isinstance(field_type, sa.Column):
                 optional = bool(field_type.default)
+                field_help = field_type.doc or field_type.comment
                 field_type = field_type.type.python_type.__name__
 
             if isclass(field_type):
@@ -265,6 +266,8 @@ class Model:
             line = f"{field_name} : {field_type}"
             if optional:
                 line = f"{line} (optional)"
+            if field_help:
+                line = f"{line}\n    {field_help}"
             parameters.append(line)
 
         doc = "\n".join(
