@@ -51,6 +51,7 @@ from .utils import Bunch
 # =============================================================================
 
 __all__ = [
+    "PRIMARY_KEY",
     "FieldError",
     "Model",
     "BaseSession",
@@ -59,13 +60,16 @@ __all__ = [
     "BaseRole",
     "Database"]
 
+
 # =============================================================================
 # SOME CONSTANTS
 # =============================================================================
 
+# Internal constant for defining which are the urls that are used in sqlalchemy
+# as in-memory databases.
 IN_MEMORY_URLS = ("sqlite:///", "sqlite://")
 
-
+# Constant for defining primary keys fields.
 PRIMARY_KEY = "<PRIMARY_KEY>"
 
 
@@ -192,7 +196,6 @@ class Model:
     All the model configuration are copied to class level attributes to
     an internal dict-like object called ``__ajc_model_conf__``
 
-
     This attributes are:
 
     name : str
@@ -242,6 +245,39 @@ class Model:
             isinstance(f_type, sa.Column) or
             (isclass(f_type) and issubclass(f_type, Model)))
 
+    @classmethod
+    def _build_doc(cls, conf):
+        base_doc = cls.__doc__
+        parameters = []
+        for field_name, field_type in conf.fields:
+            optional = False
+
+            if isinstance(field_type, sa.Column):
+                optional = bool(field_type.default)
+                field_type = field_type.type.python_type.__name__
+
+            if isclass(field_type):
+                field_type = getattr(field_type, "__name__", field_type)
+
+            if field_type is None:
+               field_type = f"{field_type} (Abstract field)"
+
+            line = f"{field_name} : {field_type}"
+            if optional:
+                line = f"{line} (optional)"
+            parameters.append(line)
+
+        attributes = [
+            f"{k} : {type(v).__name__}\n   {v or 'None'}"
+            for k, v in conf.items()
+            if k != "fields"]
+
+        doc = "\n".join(
+            [base_doc, "Parameters", "----------", ""] + parameters)
+
+        return doc
+
+
     def __init_subclass__(cls, *args, **kwargs):
         model_name = cls.__name__
 
@@ -286,17 +322,23 @@ class Model:
                             f"Field '{model_name}.{field_name}' must be "
                             "redefined if the model is concrete")
 
-            cls.__ajc_model_conf__ = Bunch(
+            conf = Bunch(
                 bunch_name=f"{model_name}.__ajc_model_conf__",
+                copy_conf=False,
                 name=model_name,
                 abstract=abstract,
                 fields=tuple(fields.items()),
                 table_name=table_name,
                 related_name=related_name)
 
-        for k in cls.__ajc_model_conf__:
+            doc = cls._build_doc(conf)
+
+        for k in conf:
             if hasattr(cls, k):
                 delattr(cls, k)
+
+        cls.__doc__ = doc
+        cls.__ajc_model_conf__ = conf
 
 
 # =============================================================================
@@ -306,7 +348,8 @@ class Model:
 class BaseSession(Model):
     """Base class to store en experiment session.
 
-    A session is an execution of an experiment assigned to several subjects.
+    A session is an execution of an experiment assigned to
+    several subjects.
 
     """
     abstract = True

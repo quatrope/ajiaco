@@ -31,16 +31,12 @@ import ajiaco as ajc
 
 # -- Project information -----------------------------------------------------
 
-project = 'Ajiaco'
-copyright = '2019, Juan BC'
-author = 'Juan BC'
+project = ajc.NAME.title()
+copyright = f'2019, {ajc.AUTHORS}'
+author = ajc.AUTHORS
 
 # The full version, including alpha/beta/rc tags
 release = ajc.VERSION
-
-
-
-
 
 
 # -- General configuration ---------------------------------------------------
@@ -67,10 +63,6 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 html_theme = 'alabaster'
-
-html_theme_options = {
-    'wending_last_updated' : False
-}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
