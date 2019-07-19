@@ -247,7 +247,7 @@ class Model:
 
     @classmethod
     def _build_doc(cls, conf):
-        base_doc = cls.__doc__
+        base_doc = cls.__doc__ or f"Model {conf.name}"
         parameters = []
         for field_name, field_type in conf.fields:
             optional = False
@@ -260,23 +260,17 @@ class Model:
                 field_type = getattr(field_type, "__name__", field_type)
 
             if field_type is None:
-               field_type = f"{field_type} (Abstract field)"
+                field_type = f"{field_type} (Abstract field)"
 
             line = f"{field_name} : {field_type}"
             if optional:
                 line = f"{line} (optional)"
             parameters.append(line)
 
-        attributes = [
-            f"{k} : {type(v).__name__}\n   {v or 'None'}"
-            for k, v in conf.items()
-            if k != "fields"]
-
         doc = "\n".join(
             [base_doc, "Parameters", "----------", ""] + parameters)
 
         return doc
-
 
     def __init_subclass__(cls, *args, **kwargs):
         model_name = cls.__name__
@@ -284,7 +278,7 @@ class Model:
         copy_conf = bool(getattr(cls, "copy_conf", False))
 
         if copy_conf:
-            cls.__ajc_model_conf__ = Bunch(
+            conf = Bunch(
                 bunch_name=f"{model_name}.__ajc_model_conf__",
                 **cls.__ajc_model_conf__)
         else:
@@ -331,14 +325,12 @@ class Model:
                 table_name=table_name,
                 related_name=related_name)
 
-            doc = cls._build_doc(conf)
+        cls.__doc__ = cls._build_doc(conf)
+        cls.__ajc_model_conf__ = conf
 
         for k in conf:
             if hasattr(cls, k):
                 delattr(cls, k)
-
-        cls.__doc__ = doc
-        cls.__ajc_model_conf__ = conf
 
 
 # =============================================================================
