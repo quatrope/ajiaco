@@ -51,7 +51,7 @@ from .utils import Bunch
 # =============================================================================
 
 __all__ = [
-    "FIELD_ERROR",
+    "FieldError",
     "Model",
     "BaseSession",
     "BaseSubject",

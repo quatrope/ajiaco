@@ -1,3 +1,19 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# This file is part of the
+#   Ajiaco Project (https://github.com/leliel12/ajiaco/).
+# Copyright (c) 2018-2019, Juan B Cabral
+# License: BSD-3-Clause
+#   Full Text: https://github.com/leliel12/ajiaco/blob/master/LICENSE
+
+
+# =============================================================================
+# DOCS
+# =============================================================================
+
+"""Here is all the utilities classes of Ajiaco"""
+
 
 # =============================================================================
 # IMPORTS
