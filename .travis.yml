@@ -1,0 +1,20 @@
+language: python
+sudo: false
+install:
+  - pip install tox
+script:
+  - tox -r
+matrix:
+    include:
+        - python: 3.7
+          env: TOXENV=style
+          sudo: true
+          dist: xenial
+        - python: 3.7
+          env: TOXENV=coverage
+          sudo: true
+          dist: xenial
+        - python: 3.7
+          env: TOXENV=py37
+          dist: xenial
+          sudo: true
