@@ -38,6 +38,7 @@ import ajiaco as ajc
 
 REQUIREMENTS = [
     # "tornado",  # the webserver and dispatcher
+    "attrs",  # for create API classes
 
     "sqlalchemy",  # the database
     "sqlalchemy-utils",  # utilities for manipulate the database

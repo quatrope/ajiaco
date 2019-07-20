@@ -80,5 +80,5 @@ class Bunch(MutableMapping):
 
     @property
     def bunch_name(self):
-        """The name of this object"""
+        """The name of this bunch"""
         return self._bunch_name

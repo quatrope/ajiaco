@@ -59,7 +59,8 @@ __all__ = [
     "BaseSubject",
     "BaseRound",
     "BaseRole",
-    "Database"]
+    "Database",
+    "Connection"]
 
 
 # =============================================================================
@@ -184,7 +185,7 @@ class Model:
     - A ``sqlalchemy.Column`` instance.
     - Another `db.Model` subclass (for relationships).
     - `None`. This is an "abstract" field and must be redefined if
-    the class is concrete.subclasses.
+      the class is concrete.
 
     Finally the rules for the names are:
 
