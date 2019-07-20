@@ -30,6 +30,7 @@ or more flexible object oriented interface.
 # =============================================================================
 
 import copy
+import contextlib
 import datetime as dt
 import decimal as dec
 from inspect import isclass
@@ -357,6 +358,10 @@ class BaseSession(Model):
         "demo": sa.Column(sa.Boolean, nullable=False),
         "len_stages": sa.Column(sa.Integer, nullable=False)}
 
+    def __repr__(self):
+        model_name = self.__ajc_model_conf__.name
+        return f"{model_name}(id={self.id}, code='{self.code}')"
+
 
 class BaseSubject(Model):
     """Base class to store subjects.
@@ -370,6 +375,10 @@ class BaseSubject(Model):
             sa.String(30), unique=True, default=shortuuid.uuid, index=True),
         "current_stage": sa.Column(sa.Integer, nullable=False, default=0),
         "session": None}
+
+    def __repr__(self):
+        model_name = self.__ajc_model_conf__.name
+        return f"{model_name}(id={self.id}, code='{self.code}')"
 
 
 class BaseRound(Model):
@@ -438,8 +447,8 @@ class Database:
         The engine of the database
     models: Bunch
         Dict-like object containing all the registered models
-    tfactory: sa.orm.session.sessionmaker
-        The engine transaction maker
+    cfactory: sa.orm.session.sessionmaker
+        The engine connection/session maker
 
     Examples
     --------
@@ -493,16 +502,17 @@ class Database:
     """
     engine: sa.engine.Engine = attr.ib()
     models: Bunch = attr.ib(init=False, repr=False)
-    tfactory: sa.orm.session.sessionmaker = attr.ib(init=False, repr=False)
+    cfactory: sa.orm.session.sessionmaker = attr.ib(init=False, repr=False)
 
     @models.default
     def _models_default(self):
         Base = declarative.declarative_base(name="Base", bind=self.engine)
         return Bunch(bunch_name="db.models", Base=Base)
 
-    @tfactory.default
-    def _transaction_factory_default(self):
-        return sa.orm.sessionmaker(bind=self.engine)
+    @cfactory.default
+    def _connection_factory_default(self):
+        return sa.orm.sessionmaker(
+            bind=self.engine, class_=Connection, db=self)
 
     # PUBLIC API FROM HERE
 
@@ -618,9 +628,10 @@ class Database:
         self.models[model_name] = real_model
         return real_model
 
-    def create_model(
-        self, name, base_model, fields, table_name, related_name, **kwargs
-    ):
+    def create_model(self,
+                     name, base_model,
+                     fields, table_name,
+                     related_name, **kwargs):
         """Create a model from a dictionary of fields and base model class.
 
         .. code-block:: python
@@ -670,6 +681,61 @@ class Database:
         """Creates all the tables related to this database"""
         return self.models.Base.metadata.create_all()
 
-    def transaction(self):
-        """Create a transaction scope for this database"""
-        # return TransactionScope(self.session_maker)
+    def connection(self):
+        """Create a connection scope for this database"""
+        return _ConnectionScope(self.cfactory)
+
+
+# =============================================================================
+# CONNECTIONS
+# =============================================================================
+
+class _ConnectionScope(contextlib.AbstractContextManager):
+    """Provide a transactional context-scope around a series of operations.
+
+    """
+
+    def __init__(self, maker):
+        self._maker = maker
+
+    def __enter__(self):
+        self._session = self._maker()
+        return self._session
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type:
+            self._session.rollback()
+        else:
+            self._session.commit()
+        self._session.close()
+
+
+class Connection(sa.orm.Session):
+    """Transactional session around an ``ajiaco.orm.Database``"""
+
+    def __init__(self, db, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._db = db
+
+    def __repr__(self):
+        """repr(X) <==> X.__repr__()"""
+        return f"Connection('{hex(id(self))}')"
+
+    @property
+    def models(self):
+        """Models container of the database"""
+        return self._db.models
+
+    def get_session(self, code_or_id):
+        """Retrieve an existing session by code or by id. If the paramater
+        ``code_or_id`` is an int instance the method asumes is the id,
+        otherwise is the code.
+
+        """
+        Session = self.models.Session
+        query = self.query(Session)
+        if isinstance(code_or_id, int):
+            query = query.filter(Session.id == code_or_id)
+        else:
+            query = query.filter(Session.code == code_or_id)
+        return query.one()

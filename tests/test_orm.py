@@ -506,7 +506,7 @@ class TestBaseSession(_TestModelsCreation):
 
         self.db.create_tables()
 
-        transaction = self.db.tfactory()
+        transaction = self.db.cfactory()
         try:
             session = Session(
                 experiment_name="foo", subjects_number=42,
@@ -518,7 +518,7 @@ class TestBaseSession(_TestModelsCreation):
         finally:
             transaction.close()
 
-        transaction = self.db.tfactory()
+        transaction = self.db.cfactory()
         try:
             session = transaction.query(Session).filter_by(id=session_id).one()
             assert session.code == session_code
@@ -566,7 +566,7 @@ class TestBaseSubject(_TestModelsCreation):
 
         self.db.create_tables()
 
-        transaction = self.db.tfactory()
+        transaction = self.db.cfactory()
         try:
             session = Session(
                 experiment_name="foo", subjects_number=42,
@@ -583,7 +583,7 @@ class TestBaseSubject(_TestModelsCreation):
         finally:
             transaction.close()
 
-        transaction = self.db.tfactory()
+        transaction = self.db.cfactory()
         try:
             session = transaction.query(Session).filter_by(id=session_id).one()
             subject = session.subjects[0]
@@ -632,7 +632,7 @@ class TestBaseRound(_TestModelsCreation):
 
         self.db.create_tables()
 
-        transaction = self.db.tfactory()
+        transaction = self.db.cfactory()
         try:
             session = Session(
                 experiment_name="foo", subjects_number=42,
@@ -651,7 +651,7 @@ class TestBaseRound(_TestModelsCreation):
         finally:
             transaction.close()
 
-        transaction = self.db.tfactory()
+        transaction = self.db.cfactory()
         try:
             session = transaction.query(Session).filter_by(id=session_id).one()
             round = session.rounds[0]
@@ -714,7 +714,7 @@ class TestBaseGroup(_TestModelsCreation):
 
         self.db.create_tables()
 
-        transaction = self.db.tfactory()
+        transaction = self.db.cfactory()
         try:
             session = Session(
                 experiment_name="foo", subjects_number=42,
@@ -737,7 +737,7 @@ class TestBaseGroup(_TestModelsCreation):
         finally:
             transaction.close()
 
-        transaction = self.db.tfactory()
+        transaction = self.db.cfactory()
         try:
             session = transaction.query(Session).filter_by(id=session_id).one()
             round = session.rounds[0]
@@ -849,7 +849,7 @@ class TestBaseRole(_TestModelsCreation):
 
         self.db.create_tables()
 
-        transaction = self.db.tfactory()
+        transaction = self.db.cfactory()
         try:
             session = Session(
                 experiment_name="foo", subjects_number=42,
@@ -883,7 +883,7 @@ class TestBaseRole(_TestModelsCreation):
 
         return
 
-        transaction = self.db.tfactory()
+        transaction = self.db.cfactory()
         try:
             session = transaction.query(Session).filter_by(id=session_id).one()
             subject = session.subjcts[0]
@@ -901,3 +901,32 @@ class TestBaseRole(_TestModelsCreation):
 
         finally:
             transaction.close()
+
+
+class TestConnection(_TestModelsCreation):
+
+    def test_get_session(self):
+
+        Session = self.db.create_model(
+            name="Session", base_model=orm.BaseSession, fields={},
+            table_name="sessions", related_name="sessions")
+
+        self.db.create_tables()
+
+        with self.db.connection() as conn:
+            session = Session(
+                experiment_name="foo", subjects_number=42,
+                demo=True, len_stages=716, data={})
+
+            conn.add(session)
+            conn.commit()
+
+            session_id, session_code = session.id, session.code
+
+        with self.db.connection() as conn:
+            session = conn.get_session(session_code)
+            assert session.id == session_id
+
+        with self.db.connection() as conn:
+            session = conn.get_session(session_id)
+            assert session.code == session_code
