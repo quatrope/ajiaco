@@ -15,7 +15,7 @@ question, try the mailing list first)
 Code Repository & Issues
 ------------------------
 
-https://github.com/ajiaco/ajiaco
+https://github.com/quatrope/ajiaco
 
 
 License
