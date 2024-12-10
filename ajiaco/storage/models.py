@@ -172,15 +172,46 @@ _SIGNALS = {
 
 
 def _connect_signals(the_models):
+    """Connect signal handlers to models if they exist.
+
+    Parameters
+    ----------
+    the_models : set
+        Set of model classes to connect signals to
+
+    Notes
+    -----
+    This function looks for class-methods named after the signals in _SIGNALS
+    on each model class and connects them to the corresponding signal
+    if they exist.
+
+    """
     for Model in the_models:
         for signal_name, signal in _SIGNALS.items():
             handler = getattr(Model, signal_name, None)
+
+            # ismethod returns true if you pass a callable from a class if
+            # the callable is already binded to "something". The only
+            # somethinng at this point is the class itself. Therefor only
+            # class methods return True
             if handler and inspect.ismethod(handler):
                 signal.connect(handler, sender=Model)
 
 
 def _concrete_models(the_database):
+    """Create concrete model classes with the given database.
 
+    Parameters
+    ----------
+    the_database : peewee.Database
+        Database instance to bind the models to
+
+    Returns
+    -------
+    set
+        Set of created model classes
+
+    """
     # here we store all the models for an easy return
     the_models = set()
 
@@ -346,12 +377,25 @@ def _concrete_models(the_database):
 
     the_models.add(StageHistory)
 
-    # RETURN ==================================================================
-
     return the_models
 
 
 def create_models(database):
+    """Create and initialize all database models.
+
+    This function creates all model classes, binds them to the provided
+    database, and connects any defined signal handlers.
+
+    Parameters
+    ----------
+    database : peewee.Database
+        Database instance to bind the models to
+
+    Returns
+    -------
+    set
+        Set of created model classes with signal handlers connected
+    """
     the_models = _concrete_models(the_database=database)
     _connect_signals(the_models)
     return the_models
