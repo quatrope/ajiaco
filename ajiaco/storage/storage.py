@@ -25,10 +25,27 @@ _SIGNALS = {
 
 
 @dataclass(frozen=True)
+class _Session:
+    transaction: ...
+    models: ...
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return None
+
+    def create_tables(self, **options):
+        database = self.transaction.db
+        models = self.models
+        database.create_tables(models, **options)
+
+
+@dataclass(frozen=True)
 class Storage:
 
     database: pw.Database
-    _models: list = field(init=False, default_factory=list, repr=False)
+    models: list = field(init=False, default_factory=list, repr=False)
 
     def __post_init__(self):
         for basemodel in _BASE_MODELS:
@@ -46,17 +63,13 @@ class Storage:
                 if handler and inspect.ismethod(handler):
                     signal.connect(handler, sender=Model)
 
-            self._models.append(Model)
+            self.models.append(Model)
 
     @classmethod
     def from_url(cls, url):
         db = db_url.connect(url)
         return cls(database=db)
 
-    @property
-    def models(self):
-        return tuple(self._models)
-
-    def create_tables(self):
-        with self.database:
-            self.database.create_tables(self._models)
+    def transaction(self):
+        with self.database.atomic() as txn:
+            return _Session(transaction=txn, models=self.models)
