@@ -216,7 +216,7 @@ def _concrete_models(the_database):
     the_models = set()
 
     # SESSION =================================================================
-    class Session(CodeAndExtraModel):
+    class SessionModel(CodeAndExtraModel):
         """Represents an experimental session.
 
         Attributes
@@ -240,10 +240,10 @@ def _concrete_models(the_database):
             database = the_database
             table_name = "sessions"
 
-    the_models.add(Session)
+    the_models.add(SessionModel)
 
     # SUBJECT =================================================================
-    class Subject(CodeAndExtraModel):
+    class SubjectModel(CodeAndExtraModel):
         """Represents a subject participating in a session.
 
         Attributes
@@ -254,17 +254,17 @@ def _concrete_models(the_database):
             Current stage number for this subject
         """
 
-        session = pw.ForeignKeyField(Session, backref="subjects")
+        session = pw.ForeignKeyField(SessionModel, backref="subjects")
         current_stage = pw.IntegerField()
 
         class Meta:
             database = the_database
             table_name = "subjects"
 
-    the_models.add(Subject)
+    the_models.add(SubjectModel)
 
     # ROUND ===================================================================
-    class Round(CodeAndExtraModel):
+    class RoundModel(CodeAndExtraModel):
         """Represents a round within a session.
 
         Attributes
@@ -283,7 +283,7 @@ def _concrete_models(the_database):
             Whether this is the last round
         """
 
-        session = pw.ForeignKeyField(Session, backref="rounds")
+        session = pw.ForeignKeyField(SessionModel, backref="rounds")
         game_name = pw.CharField()
         part = pw.IntegerField()
         number = pw.IntegerField()
@@ -294,10 +294,10 @@ def _concrete_models(the_database):
             database = the_database
             table_name = "rounds"
 
-    the_models.add(Round)
+    the_models.add(RoundModel)
 
     # GROUP ===================================================================
-    class Group(CodeAndExtraModel):
+    class GroupModel(CodeAndExtraModel):
         """Represents a group of subjects within a round.
 
         Attributes
@@ -306,16 +306,16 @@ def _concrete_models(the_database):
             Reference to the round this group belongs to
         """
 
-        round = pw.ForeignKeyField(Round, backref="groups")
+        round = pw.ForeignKeyField(RoundModel, backref="groups")
 
         class Meta:
             database = the_database
             table_name = "groups"
 
-    the_models.add(Group)
+    the_models.add(GroupModel)
 
     # ROLE ====================================================================
-    class Role(CodeAndExtraModel):
+    class RoleModel(CodeAndExtraModel):
         """Represents a subject's role within a group.
 
         Attributes
@@ -330,8 +330,8 @@ def _concrete_models(the_database):
             Number identifying this role within the group
         """
 
-        group = pw.ForeignKeyField(Group, backref="roles")
-        subject = pw.ForeignKeyField(Subject, backref="roles")
+        group = pw.ForeignKeyField(GroupModel, backref="roles")
+        subject = pw.ForeignKeyField(SubjectModel, backref="roles")
         number = pw.IntegerField()
         in_group_number = pw.IntegerField()
 
@@ -339,10 +339,10 @@ def _concrete_models(the_database):
             database = the_database
             table_name = "roles"
 
-    the_models.add(Role)
+    the_models.add(RoleModel)
 
     # HISTORY =================================================================
-    class StageHistory(AJCModel):
+    class StageHistoryModel(AJCModel):
         """Records the history of a subject's progression through stages.
 
         Attributes
@@ -363,7 +363,7 @@ def _concrete_models(the_database):
             Whether the stage timed out
         """
 
-        role = pw.ForeignKeyField(Role, backref="stages")
+        role = pw.ForeignKeyField(RoleModel, backref="stages")
         stage_idx = pw.IntegerField()
         timeout = pw.FloatField()
         enter_at = DateTimeISOFormatField()
@@ -375,7 +375,7 @@ def _concrete_models(the_database):
             database = the_database
             table_name = "stage_histories"
 
-    the_models.add(StageHistory)
+    the_models.add(StageHistoryModel)
 
     return the_models
 
