@@ -1,4 +1,5 @@
 import datetime as dt
+import inspect
 import uuid
 
 import peewee as pw
@@ -158,149 +159,199 @@ class CodeAndExtraModel(AJCModel):
 
 
 # =============================================================================
-# CONCRETE MODELS
+# MODELS CREATION
 # =============================================================================
 
-
-class Session(CodeAndExtraModel):
-    """Represents an experimental session.
-
-    Attributes
-    ----------
-    experiment_name : CharField
-        Name of the experiment
-    subjects_number : IntegerField
-        Number of subjects in the session
-    demo : BooleanField
-        Whether this is a demo session
-    len_stages : IntegerField
-        Number of stages in the session
-    """
-
-    experiment_name = pw.CharField()
-    subjects_number = pw.IntegerField()
-    demo = pw.BooleanField()
-    len_stages = pw.IntegerField()
-
-    class Meta:
-        table_name = "sessions"
+_SIGNALS = {
+    "pre_save": signals.pre_save,
+    "post_save": signals.post_save,
+    "pre_delete": signals.pre_delete,
+    "post_delete": signals.post_delete,
+    "pre_init": signals.pre_init,
+}
 
 
-class Subject(CodeAndExtraModel):
-    """Represents a subject participating in a session.
-
-    Attributes
-    ----------
-    session : ForeignKeyField
-        Reference to the session this subject belongs to
-    current_stage : IntegerField
-        Current stage number for this subject
-    """
-
-    session = pw.ForeignKeyField(Session, backref="subjects")
-    current_stage = pw.IntegerField()
-
-    class Meta:
-        table_name = "subjects"
+def _connect_signals(the_models):
+    for Model in the_models:
+        for signal_name, signal in _SIGNALS.items():
+            handler = getattr(Model, signal_name, None)
+            if handler and inspect.ismethod(handler):
+                signal.connect(handler, sender=Model)
 
 
-class Round(CodeAndExtraModel):
-    """Represents a round within a session.
+def _concrete_models(the_database):
 
-    Attributes
-    ----------
-    session : ForeignKeyField
-        Reference to the parent session
-    game_name : CharField
-        Name of the game being played
-    part : IntegerField
-        Part number within the session
-    number : IntegerField
-        Round number
-    is_first : BooleanField
-        Whether this is the first round
-    is_last : BooleanField
-        Whether this is the last round
-    """
+    # here we store all the models for an easy return
+    the_models = set()
 
-    session = pw.ForeignKeyField(Session, backref="rounds")
-    game_name = pw.CharField()
-    part = pw.IntegerField()
-    number = pw.IntegerField()
-    is_first = pw.BooleanField()
-    is_last = pw.BooleanField()
+    # SESSION =================================================================
+    class Session(CodeAndExtraModel):
+        """Represents an experimental session.
 
-    class Meta:
-        table_name = "rounds"
+        Attributes
+        ----------
+        experiment_name : CharField
+            Name of the experiment
+        subjects_number : IntegerField
+            Number of subjects in the session
+        demo : BooleanField
+            Whether this is a demo session
+        len_stages : IntegerField
+            Number of stages in the session
+        """
+
+        experiment_name = pw.CharField()
+        subjects_number = pw.IntegerField()
+        demo = pw.BooleanField()
+        len_stages = pw.IntegerField()
+
+        class Meta:
+            database = the_database
+            table_name = "sessions"
+
+    the_models.add(Session)
+
+    # SUBJECT =================================================================
+    class Subject(CodeAndExtraModel):
+        """Represents a subject participating in a session.
+
+        Attributes
+        ----------
+        session : ForeignKeyField
+            Reference to the session this subject belongs to
+        current_stage : IntegerField
+            Current stage number for this subject
+        """
+
+        session = pw.ForeignKeyField(Session, backref="subjects")
+        current_stage = pw.IntegerField()
+
+        class Meta:
+            database = the_database
+            table_name = "subjects"
+
+    the_models.add(Subject)
+
+    # ROUND ===================================================================
+    class Round(CodeAndExtraModel):
+        """Represents a round within a session.
+
+        Attributes
+        ----------
+        session : ForeignKeyField
+            Reference to the parent session
+        game_name : CharField
+            Name of the game being played
+        part : IntegerField
+            Part number within the session
+        number : IntegerField
+            Round number
+        is_first : BooleanField
+            Whether this is the first round
+        is_last : BooleanField
+            Whether this is the last round
+        """
+
+        session = pw.ForeignKeyField(Session, backref="rounds")
+        game_name = pw.CharField()
+        part = pw.IntegerField()
+        number = pw.IntegerField()
+        is_first = pw.BooleanField()
+        is_last = pw.BooleanField()
+
+        class Meta:
+            database = the_database
+            table_name = "rounds"
+
+    the_models.add(Round)
+
+    # GROUP ===================================================================
+    class Group(CodeAndExtraModel):
+        """Represents a group of subjects within a round.
+
+        Attributes
+        ----------
+        round : ForeignKeyField
+            Reference to the round this group belongs to
+        """
+
+        round = pw.ForeignKeyField(Round, backref="groups")
+
+        class Meta:
+            database = the_database
+            table_name = "groups"
+
+    the_models.add(Group)
+
+    # ROLE ====================================================================
+    class Role(CodeAndExtraModel):
+        """Represents a subject's role within a group.
+
+        Attributes
+        ----------
+        group : ForeignKeyField
+            Reference to the group this role belongs to
+        subject : ForeignKeyField
+            Reference to the subject assigned this role
+        number : IntegerField
+            Role number
+        in_group_number : IntegerField
+            Number identifying this role within the group
+        """
+
+        group = pw.ForeignKeyField(Group, backref="roles")
+        subject = pw.ForeignKeyField(Subject, backref="roles")
+        number = pw.IntegerField()
+        in_group_number = pw.IntegerField()
+
+        class Meta:
+            database = the_database
+            table_name = "roles"
+
+    the_models.add(Role)
+
+    # HISTORY =================================================================
+    class StageHistory(AJCModel):
+        """Records the history of a subject's progression through stages.
+
+        Attributes
+        ----------
+        role : ForeignKeyField
+            Reference to the role this history belongs to
+        stage_idx : IntegerField
+            Index of the stage
+        timeout : FloatField
+            Timeout duration for the stage
+        enter_at : DateTimeISOFormatField
+            When the subject entered this stage
+        expire_at : DateTimeISOFormatField
+            When the stage will expire
+        exit_at : DateTimeISOFormatField
+            When the subject exited this stage (null if not yet exited)
+        timed_out : BooleanField
+            Whether the stage timed out
+        """
+
+        role = pw.ForeignKeyField(Role, backref="stages")
+        stage_idx = pw.IntegerField()
+        timeout = pw.FloatField()
+        enter_at = DateTimeISOFormatField()
+        expire_at = DateTimeISOFormatField()
+        exit_at = DateTimeISOFormatField(null=True)
+        timed_out = pw.BooleanField(default=False)
+
+        class Meta:
+            database = the_database
+            table_name = "stage_histories"
+
+    the_models.add(StageHistory)
+
+    # RETURN ==================================================================
+
+    return the_models
 
 
-class Group(CodeAndExtraModel):
-    """Represents a group of subjects within a round.
-
-    Attributes
-    ----------
-    round : ForeignKeyField
-        Reference to the round this group belongs to
-    """
-
-    round = pw.ForeignKeyField(Round, backref="groups")
-
-    class Meta:
-        table_name = "groups"
-
-
-class Role(CodeAndExtraModel):
-    """Represents a subject's role within a group.
-
-    Attributes
-    ----------
-    group : ForeignKeyField
-        Reference to the group this role belongs to
-    subject : ForeignKeyField
-        Reference to the subject assigned this role
-    number : IntegerField
-        Role number
-    in_group_number : IntegerField
-        Number identifying this role within the group
-    """
-
-    group = pw.ForeignKeyField(Group, backref="roles")
-    subject = pw.ForeignKeyField(Subject, backref="roles")
-    number = pw.IntegerField()
-    in_group_number = pw.IntegerField()
-
-    class Meta:
-        table_name = "roles"
-
-
-class StageHistory(AJCModel):
-    """Records the history of a subject's progression through stages.
-
-    Attributes
-    ----------
-    role : ForeignKeyField
-        Reference to the role this history belongs to
-    stage_idx : IntegerField
-        Index of the stage
-    timeout : FloatField
-        Timeout duration for the stage
-    enter_at : DateTimeISOFormatField
-        When the subject entered this stage
-    expire_at : DateTimeISOFormatField
-        When the stage will expire
-    exit_at : DateTimeISOFormatField
-        When the subject exited this stage (null if not yet exited)
-    timed_out : BooleanField
-        Whether the stage timed out
-    """
-
-    role = pw.ForeignKeyField(Role, backref="stages")
-    stage_idx = pw.IntegerField()
-    timeout = pw.FloatField()
-    enter_at = DateTimeISOFormatField()
-    expire_at = DateTimeISOFormatField()
-    exit_at = DateTimeISOFormatField(null=True)
-    timed_out = pw.BooleanField(default=False)
-
-    class Meta:
-        table_name = "stage_histories"
+def create_models(database):
+    the_models = _concrete_models(the_database=database)
+    _connect_signals(the_models)
+    return the_models
