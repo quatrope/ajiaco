@@ -1,6 +1,8 @@
+import inspect
 from dataclasses import dataclass, field
+
 import peewee as pw
-from playhouse import db_url
+from playhouse import db_url, signals
 
 from . import models
 
@@ -12,6 +14,14 @@ _BASE_MODELS = (
     models.Role,
     models.StageHistory,
 )
+
+_SIGNALS = {
+    "pre_save": signals.pre_save,
+    "post_save": signals.post_save,
+    "pre_delete": signals.pre_delete,
+    "post_delete": signals.post_delete,
+    "pre_init": signals.pre_init,
+}
 
 
 @dataclass(frozen=True)
@@ -28,7 +38,14 @@ class Storage:
                 database = self.database
 
             name = basemodel.__name__
+
             Model = type(name, (basemodel,), {"Meta": Meta})
+
+            for signal_name, signal in _SIGNALS.items():
+                handler = getattr(Model, signal_name, None)
+                if handler and inspect.ismethod(handler):
+                    signal.connect(handler, sender=Model)
+
             self._models.append(Model)
 
     @classmethod
