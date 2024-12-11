@@ -1,43 +1,57 @@
 from dataclasses import dataclass, field
 
-import peewee as pw
-from playhouse import db_url
+import sqlalchemy as sa
+from sqlalchemy import orm
+
 
 from . import models
 
 
-@dataclass(frozen=True)
-class _Session:
-    transaction: ...
-    models: ...
+class _AJCSession(orm.Session):
 
-    def __enter__(self):
-        return self
+    def __init__(self, storage, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.storage = storage
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        return None
+    def create_tables(self):
+        BaseModel = self.storage.BaseModel
+        return BaseModel.metadata.create_all(self.bind)
 
-    def create_tables(self, **options):
-        database = self.transaction.db
-        models = self.models
-        database.create_tables(models, **options)
+
+def _default_session_maker():
+    return orm.sessionmaker(class_=_AJCSession)
 
 
 @dataclass(frozen=True)
 class Storage:
 
-    database: pw.Database
-    models: set = field(init=False, default_factory=set, repr=False)
+    engine: sa.Engine
+    BaseModel: orm.DeclarativeBase = field(
+        init=False,
+        default_factory=orm.declarative_base,
+        repr=False,
+    )
+    session_maker: orm.Session = field(
+        init=False,
+        default_factory=_default_session_maker,
+        repr=False,
+    )
+    models: set = field(
+        init=False,
+        default_factory=set,
+        repr=False,
+    )
 
     def __post_init__(self):
-        the_models = models.create_models(self.database)
+        the_models = models.create_models(base_model_cls=self.BaseModel)
         self.models.update(the_models)
 
+        self.session_maker.configure(bind=self.engine, storage=self)
+
     @classmethod
-    def from_url(cls, url):
-        db = db_url.connect(url)
-        return cls(database=db)
+    def from_url(cls, dburl, echo=False):
+        the_engine = sa.create_engine(dburl, echo=echo)
+        return cls(engine=the_engine)
 
     def transaction(self):
-        with self.database.atomic() as txn:
-            return _Session(transaction=txn, models=self.models)
+        return self.session_maker()
