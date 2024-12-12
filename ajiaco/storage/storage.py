@@ -43,9 +43,11 @@ class Storage:
     )
 
     def __post_init__(self):
+        # setup the models
         the_models = models.create_models(base_model_cls=self.BaseModel)
         self.models.update(the_models)
 
+        # bind the session maker
         self.session_maker.configure(bind=self.engine, storage=self)
 
     @classmethod

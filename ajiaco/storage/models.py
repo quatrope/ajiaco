@@ -15,6 +15,10 @@ import sqlalchemy.orm as orm
 # =============================================================================
 
 
+def _utcnow():
+    return dt.datetime.now(dt.timezone.utc)
+
+
 def create_models(base_model_cls):
 
     # First the abstracts =====================================================
@@ -23,10 +27,10 @@ def create_models(base_model_cls):
 
         __abstract__ = True
 
-        id: orm.Mapped[int] = orm.mapped_column(sa.Integer, primary_key=True)
+        id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
         created_at: orm.Mapped[dt.datetime] = orm.mapped_column(
             sa.DateTime(timezone=True),
-            default=lambda: dt.datetime.now(dt.timezone.utc),
+            default=_utcnow,
             nullable=False,
         )
 
@@ -47,10 +51,10 @@ def create_models(base_model_cls):
     the_models = set()
 
     # SESSION =================================================================
-    class Session(AJCModel):
+    class SessionModel(CodeAndExtraModel):
         """Represents an experimental session."""
 
-        __tablename__ = "sessions"
+        __tablename__ = "ajc_sessions"
 
         experiment_name: orm.Mapped[str] = orm.mapped_column(
             sa.String, nullable=False
@@ -63,48 +67,34 @@ def create_models(base_model_cls):
             sa.Integer, nullable=False
         )
 
-        # Relationships
-        subjects: orm.Mapped[list["Subject"]] = orm.relationship(
-            back_populates="session", cascade="all, delete-orphan"
-        )
-        rounds: orm.Mapped[list["Round"]] = orm.relationship(
-            back_populates="session", cascade="all, delete-orphan"
-        )
-
-    the_models.add(Session)
+    the_models.add(SessionModel)
 
     # SUBJECT =================================================================
-    class Subject(AJCModel):
+    class SubjectModel(CodeAndExtraModel):
         """Represents a subject participating in a session."""
 
-        __tablename__ = "subjects"
+        __tablename__ = "ajc_subjects"
 
-        session_code: orm.Mapped[uuid.UUID] = orm.mapped_column(
-            sa.ForeignKey("sessions.code", ondelete="CASCADE"), nullable=False
-        )
         current_stage: orm.Mapped[int] = orm.mapped_column(
             sa.Integer, nullable=False
         )
 
         # Relationships
-        session: orm.Mapped[Session] = orm.relationship(
-            back_populates="subjects"
+        session_id: orm.Mapped[int] = orm.mapped_column(
+            sa.ForeignKey("ajc_sessions.id"), nullable=False
         )
-        roles: orm.Mapped[list["Role"]] = orm.relationship(
-            back_populates="subject", cascade="all, delete-orphan"
+        session: orm.Mapped[SessionModel] = orm.relationship(
+            back_populates="subjects", lazy=False
         )
 
-    the_models.add(Subject)
+    the_models.add(SubjectModel)
 
     # ROUND ===================================================================
-    class Round(AJCModel):
+    class RoundModel(CodeAndExtraModel):
         """Represents a round within a session."""
 
-        __tablename__ = "rounds"
+        __tablename__ = "ajc_rounds"
 
-        session_code: orm.Mapped[uuid.UUID] = orm.mapped_column(
-            sa.ForeignKey("sessions.code", ondelete="CASCADE"), nullable=False
-        )
         game_name: orm.Mapped[str] = orm.mapped_column(
             sa.String, nullable=False
         )
@@ -118,74 +108,71 @@ def create_models(base_model_cls):
         )
 
         # Relationships
-        session: orm.Mapped[Session] = orm.relationship(
-            back_populates="rounds"
+        session_id: orm.Mapped[int] = orm.mapped_column(
+            sa.ForeignKey("ajc_sessions.id"), nullable=False
         )
-        groups: orm.Mapped[list["Group"]] = orm.relationship(
-            back_populates="round", cascade="all, delete-orphan"
+        session: orm.Mapped[SessionModel] = orm.relationship(
+            back_populates="rounds", lazy=False
         )
 
-    the_models.add(Round)
+    the_models.add(RoundModel)
 
     # GROUP ===================================================================
-    class Group(AJCModel):
+    class GroupModel(CodeAndExtraModel):
         """Represents a group of subjects within a round."""
 
-        __tablename__ = "groups"
-
-        round_code: orm.Mapped[uuid.UUID] = orm.mapped_column(
-            sa.ForeignKey("rounds.code", ondelete="CASCADE"), nullable=False
-        )
+        __tablename__ = "ajc_groups"
 
         # Relationships
-        round: orm.Mapped[Round] = orm.relationship(back_populates="groups")
-        roles: orm.Mapped[list["Role"]] = orm.relationship(
-            back_populates="group", cascade="all, delete-orphan"
+        round_id: orm.Mapped[int] = orm.mapped_column(
+            sa.ForeignKey("ajc_rounds.id"), nullable=False
+        )
+        round: orm.Mapped[RoundModel] = orm.relationship(
+            back_populates="groups", lazy=False
         )
 
-    the_models.add(Group)
+    the_models.add(GroupModel)
 
     # ROLE ====================================================================
-    class Role(AJCModel):
+    class Role(CodeAndExtraModel):
         """Represents a subject's role within a group."""
 
-        __tablename__ = "roles"
+        __tablename__ = "ajc_roles"
 
-        group_code: orm.Mapped[uuid.UUID] = orm.mapped_column(
-            sa.ForeignKey("groups.code", ondelete="CASCADE"), nullable=False
-        )
-        subject_code: orm.Mapped[uuid.UUID] = orm.mapped_column(
-            sa.ForeignKey("subjects.code", ondelete="CASCADE"), nullable=False
-        )
         number: orm.Mapped[int] = orm.mapped_column(sa.Integer, nullable=False)
         in_group_number: orm.Mapped[int] = orm.mapped_column(
             sa.Integer, nullable=False
         )
 
-        # Relationships
-        group: orm.Mapped[Group] = orm.relationship(back_populates="roles")
-        subject: orm.Mapped[Subject] = orm.relationship(back_populates="roles")
-        stages: orm.Mapped[list["StageHistory"]] = orm.relationship(
-            back_populates="role", cascade="all, delete-orphan"
+        group_id: orm.Mapped[int] = orm.mapped_column(
+            sa.ForeignKey("ajc_groups.id"), nullable=False
+        )
+        group: orm.Mapped[GroupModel] = orm.relationship(
+            back_populates="roles"
+        )
+
+        subject_id: orm.Mapped[int] = orm.mapped_column(
+            sa.ForeignKey("ajc_subjects.id"), nullable=False
+        )
+        subject: orm.Mapped[SubjectModel] = orm.relationship(
+            back_populates="roles", lazy=False
         )
 
     the_models.add(Role)
 
-    # HISTORY =================================================================
+    # # HISTORY =================================================================
     class StageHistory(AJCModel):
         """Records the history of a subject's progression through stages."""
 
-        __tablename__ = "stage_histories"
+        __tablename__ = "ajc_stage_histories"
 
-        role_code: orm.Mapped[uuid.UUID] = orm.mapped_column(
-            sa.ForeignKey("roles.code", ondelete="CASCADE"), nullable=False
-        )
         stage_idx: orm.Mapped[int] = orm.mapped_column(
             sa.Integer, nullable=False
         )
         timeout: orm.Mapped[float] = orm.mapped_column(
             sa.Float, nullable=False
         )
+
         enter_at: orm.Mapped[dt.datetime] = orm.mapped_column(
             sa.DateTime(timezone=True), nullable=False
         )
@@ -195,12 +182,32 @@ def create_models(base_model_cls):
         exit_at: orm.Mapped[Optional[dt.datetime]] = orm.mapped_column(
             sa.DateTime(timezone=True), nullable=True
         )
+
         timed_out: orm.Mapped[bool] = orm.mapped_column(
             sa.Boolean, nullable=False, default=False
         )
 
         # Relationships
+        role_id: orm.Mapped[id] = orm.mapped_column(
+            sa.ForeignKey("ajc_roles.id"), nullable=False
+        )
         role: orm.Mapped[Role] = orm.relationship(back_populates="stages")
+
+        subject_id: orm.Mapped[int] = orm.mapped_column(
+            sa.ForeignKey("ajc_subjects.id"), nullable=False
+        )
+        subject: orm.Mapped[SubjectModel] = orm.relationship(
+            back_populates="stages", lazy=False
+        )
+
+        @property
+        def expired(self):
+            return bool(
+                self.timeout
+                and self.enter_dt
+                and self.expire_dt
+                and _utcnow() >= self.expire_dt
+            )
 
     the_models.add(StageHistory)
 
