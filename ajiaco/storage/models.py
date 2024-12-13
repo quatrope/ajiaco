@@ -1,10 +1,10 @@
+from collections.abc import Mapping
 import datetime as dt
-import inspect
+import itertools as it
 import uuid
+from typing import Optional
 
-import datetime as dt
-import uuid
-from typing import Any, Optional
+import attrs
 
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
@@ -15,15 +15,45 @@ import sqlalchemy.orm as orm
 # =============================================================================
 
 
+@attrs.define(frozen=True, repr=False)
+class _ModelsContainer(Mapping):
+    BaseModel: ...
+    models: frozenset
+
+    def items(self):
+        for model in it.chain([self.BaseModel], self.models):
+            name = model.__name__
+            yield name, model
+
+    def __getitem__(self, k):
+        for name, model in self.items():
+            if k == name:
+                return model
+        raise KeyError(k)
+
+    def __iter__(self):
+        return (name for name, _ in self.items())
+
+    def __len__(self):
+        return len(self.models) + 1
+
+    def __repr__(self):
+        models = set(self.keys())
+        return f"<models {models!r}>"
+
+
 def _utcnow():
     return dt.datetime.now(dt.timezone.utc)
 
 
-def create_models(base_model_cls):
+def create_models(metadata: sa.MetaData):
 
-    # First the abstracts =====================================================
-    class AJCModel(base_model_cls):
-        """Base model with creation timestamp."""
+    # First the Base Model ====================================================
+    BaseModel = orm.declarative_base(name="BaseModel", metadata=metadata)
+
+    # Second the abstracts ====================================================
+    class IDCreatedAtModelABC(BaseModel):
+        """Base model with id and creation timestamp."""
 
         __abstract__ = True
 
@@ -34,8 +64,8 @@ def create_models(base_model_cls):
             nullable=False,
         )
 
-    class CodeAndExtraModel(AJCModel):
-        """Abstract base model with UUID primary key and extra JSON data."""
+    class CodeAndExtraModelABC(IDCreatedAtModelABC):
+        """Abstract base model with UUID  and extra JSON data."""
 
         __abstract__ = True
 
@@ -51,7 +81,7 @@ def create_models(base_model_cls):
     the_models = set()
 
     # SESSION =================================================================
-    class SessionModel(CodeAndExtraModel):
+    class ExperimentSessionModel(CodeAndExtraModelABC):
         """Represents an experimental session."""
 
         __tablename__ = "ajc_sessions"
@@ -67,10 +97,10 @@ def create_models(base_model_cls):
             sa.Integer, nullable=False
         )
 
-    the_models.add(SessionModel)
+    the_models.add(ExperimentSessionModel)
 
     # SUBJECT =================================================================
-    class SubjectModel(CodeAndExtraModel):
+    class SubjectModel(CodeAndExtraModelABC):
         """Represents a subject participating in a session."""
 
         __tablename__ = "ajc_subjects"
@@ -83,14 +113,14 @@ def create_models(base_model_cls):
         session_id: orm.Mapped[int] = orm.mapped_column(
             sa.ForeignKey("ajc_sessions.id"), nullable=False
         )
-        session: orm.Mapped[SessionModel] = orm.relationship(
+        session: orm.Mapped[ExperimentSessionModel] = orm.relationship(
             back_populates="subjects", lazy=False
         )
 
     the_models.add(SubjectModel)
 
     # ROUND ===================================================================
-    class RoundModel(CodeAndExtraModel):
+    class RoundModel(CodeAndExtraModelABC):
         """Represents a round within a session."""
 
         __tablename__ = "ajc_rounds"
@@ -111,14 +141,14 @@ def create_models(base_model_cls):
         session_id: orm.Mapped[int] = orm.mapped_column(
             sa.ForeignKey("ajc_sessions.id"), nullable=False
         )
-        session: orm.Mapped[SessionModel] = orm.relationship(
+        session: orm.Mapped[ExperimentSessionModel] = orm.relationship(
             back_populates="rounds", lazy=False
         )
 
     the_models.add(RoundModel)
 
     # GROUP ===================================================================
-    class GroupModel(CodeAndExtraModel):
+    class GroupModel(CodeAndExtraModelABC):
         """Represents a group of subjects within a round."""
 
         __tablename__ = "ajc_groups"
@@ -134,7 +164,7 @@ def create_models(base_model_cls):
     the_models.add(GroupModel)
 
     # ROLE ====================================================================
-    class Role(CodeAndExtraModel):
+    class Role(CodeAndExtraModelABC):
         """Represents a subject's role within a group."""
 
         __tablename__ = "ajc_roles"
@@ -161,7 +191,7 @@ def create_models(base_model_cls):
     the_models.add(Role)
 
     # # HISTORY =================================================================
-    class StageHistory(AJCModel):
+    class StageHistory(IDCreatedAtModelABC):
         """Records the history of a subject's progression through stages."""
 
         __tablename__ = "ajc_stage_histories"
@@ -211,4 +241,8 @@ def create_models(base_model_cls):
 
     the_models.add(StageHistory)
 
-    return the_models
+    models_container = _ModelsContainer(
+        BaseModel=BaseModel, models=frozenset(the_models)
+    )
+
+    return models_container
