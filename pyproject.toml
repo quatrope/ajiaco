@@ -1,0 +1,17 @@
+[tool.black]
+line-length = 79
+target-version = ['py39', 'py310', 'py311']
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests that require significant execution time (deselect with '-m \"not slow\"')",
+    "plot: marks tests related to matplotlib integration (deselect with '-m \"not plot\"')",
+]
+testpaths = [
+    "tests",
+]
+addopts = "-m 'not slow' --disable-warnings -n auto"
+
+
+
+
