@@ -46,9 +46,9 @@ class Storage:
     # OTHER CONSTRUCTORS ======================================================
 
     @classmethod
-    def from_url(cls, dburl, **kwargs):
+    def from_url(cls, db_url, **kwargs):
         kwargs.setdefault("echo", False)
-        the_engine = sa.create_engine(dburl, **kwargs)
+        the_engine = sa.create_engine(db_url, **kwargs)
         return cls(engine=the_engine)
 
     # API =====================================================================
