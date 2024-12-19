@@ -1,19 +1,15 @@
 import pathlib
+import sys
 
 import attrs
 from attrs import validators as valids
 
-from ..storage import Storage
+from .cli import CommandRegister, CLIManager, CLI_BUILTINS
+from .storage import Storage
 
 # =============================================================================
 # MAIN PROJECT CLASS
 # =============================================================================
-
-
-def _coerce_storage(value):
-    if isinstance(value, str):
-        value = Storage.from_url(value)
-    return value
 
 
 @attrs.define(frozen=True)
@@ -38,6 +34,10 @@ class Application:
         validator=valids.instance_of(Storage),
         repr=False,
     )
+    commands: CommandRegister = attrs.field(
+        init=False,
+        repr=False,
+    )
 
     _experiment_sessions_defaults: dict = attrs.field(
         init=False,
@@ -52,6 +52,11 @@ class Application:
     def _storage_default(self):
         path = self.app_path / "database.sqlite3"
         return Storage.from_url(f"sqlite:///{path}")
+
+    @commands.default
+    def _commands_default(self):
+        name = f"Commands of '{self.app_path}'"
+        return CommandRegister(name=name, not_available=CLI_BUILTINS)
 
     # API =====================================================================
 
@@ -68,6 +73,12 @@ class Application:
         if "name" in kwargs:
             raise ValueError("'name' can't be default")
         self._experiment_sessions_defaults.update(kwargs)
+
+    def run_from_command_line(self):
+        cli_manager = CLIManager(
+            app=self, commands=[self.commands, CLI_BUILTINS]
+        )
+        return cli_manager.parse_and_run()
 
     # SCHEMA = {
 

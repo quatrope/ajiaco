@@ -11,12 +11,12 @@ import sqlalchemy.orm as orm
 
 
 # =============================================================================
-# MODELS CREATION
+# MODELS CONTAINER
 # =============================================================================
 
 
 @attrs.define(frozen=True, repr=False)
-class _ModelsContainer(Mapping):
+class ModelsContainer(Mapping):
     BaseModel: ...
     models: frozenset
 
@@ -25,21 +25,35 @@ class _ModelsContainer(Mapping):
             name = model.__name__
             yield name, model
 
+    def __dir__(self):
+        return super().__dir__() + list(self)
+
     def __getitem__(self, k):
         for name, model in self.items():
             if k == name:
                 return model
         raise KeyError(k)
 
+    def __getattr__(self, a):
+        try:
+            return self[a]
+        except KeyError:
+            raise AttributeError(a)
+
     def __iter__(self):
         return (name for name, _ in self.items())
 
     def __len__(self):
-        return len(self.models) + 1
+        return len(self.models) + 1  # + BaseModel
 
     def __repr__(self):
         models = set(self.keys())
         return f"<models {models!r}>"
+
+
+# =============================================================================
+# MODELS CREATION
+# =============================================================================
 
 
 def _utcnow():
@@ -52,7 +66,7 @@ def create_models(metadata: sa.MetaData):
     BaseModel = orm.declarative_base(name="BaseModel", metadata=metadata)
 
     # Second the abstracts ====================================================
-    class IDCreatedAtModelABC(BaseModel):
+    class IDAndCreatedAtModelABC(BaseModel):
         """Base model with id and creation timestamp."""
 
         __abstract__ = True
@@ -64,7 +78,7 @@ def create_models(metadata: sa.MetaData):
             nullable=False,
         )
 
-    class CodeAndExtraModelABC(IDCreatedAtModelABC):
+    class CodeAndExtraModelABC(IDAndCreatedAtModelABC):
         """Abstract base model with UUID  and extra JSON data."""
 
         __abstract__ = True
@@ -191,7 +205,7 @@ def create_models(metadata: sa.MetaData):
     the_models.add(Role)
 
     # # HISTORY =================================================================
-    class StageHistory(IDCreatedAtModelABC):
+    class StageHistory(IDAndCreatedAtModelABC):
         """Records the history of a subject's progression through stages."""
 
         __tablename__ = "ajc_stage_histories"
@@ -241,7 +255,7 @@ def create_models(metadata: sa.MetaData):
 
     the_models.add(StageHistory)
 
-    models_container = _ModelsContainer(
+    models_container = ModelsContainer(
         BaseModel=BaseModel, models=frozenset(the_models)
     )
 

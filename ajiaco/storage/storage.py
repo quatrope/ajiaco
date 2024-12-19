@@ -3,19 +3,16 @@ import attrs
 import sqlalchemy as sa
 from sqlalchemy import orm
 
+import sqlalchemy_utils as sa_utils
 
-from . import models
+from .models import ModelsContainer, create_models
 
 
-class _StorageSession(orm.Session):
+class StorageSession(orm.Session):
 
     def __init__(self, storage, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.storage = storage
-
-    def create_tables(self):
-        BaseModel = self.storage.models.BaseModel
-        return BaseModel.metadata.create_all(self.bind)
 
 
 @attrs.define(frozen=True)
@@ -28,20 +25,20 @@ class Storage:
         repr=False,
     )
     session_maker: orm.Session = attrs.field(init=False, repr=False)
-    models: ... = attrs.field(init=False, repr=False)
+    models: ModelsContainer = attrs.field(init=False, repr=False)
 
     @session_maker.default
     def _session_maker_default(self):
         maker = orm.sessionmaker(
             bind=self.engine,
-            class_=_StorageSession,
+            class_=StorageSession,
             storage=self,
         )
         return maker
 
     @models.default
     def _models_default(self) -> set:
-        return models.create_models(metadata=self.metadata)
+        return create_models(metadata=self.metadata)
 
     # OTHER CONSTRUCTORS ======================================================
 
@@ -53,5 +50,21 @@ class Storage:
 
     # API =====================================================================
 
+    def exists(self):
+        return sa_utils.functions.database_exists(self.engine.url)
+
+    def drop_storage(self):
+        return sa_utils.functions.drop_database(self.engine.url)
+
+    def create_storage(self):
+        return sa_utils.functions.create_database(self.engine.url)
+
+    def create_schema(self):
+        BaseModel = self.models.BaseModel
+        return BaseModel.metadata.create_all(self.engine)
+
     def transaction(self):
         return self.session_maker()
+
+    def stamp(self):
+        pass
