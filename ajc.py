@@ -2,7 +2,7 @@
 import ajiaco as ajc
 
 
-app = ajc.Application(
+app = ajc.AjcApplication(
     filename=__file__,
     secret="xcsosslbRaiSUBJUO5Dn42F4Ym4dXETrnxfJjd+YJS4=",
     verbose=True)

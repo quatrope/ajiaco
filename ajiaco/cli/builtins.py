@@ -1,7 +1,7 @@
-from .register import CommandRegister
+from .register import AjcCommandRegister
 
 
-CLI_BUILTINS = CommandRegister("BUILTINS")
+CLI_BUILTINS = AjcCommandRegister("BUILTINS")
 
 
 @CLI_BUILTINS.register
@@ -18,8 +18,7 @@ def reset_storage(app, noinput: bool = False):
     if noinput:
         answer = "yes"
     else:
-        answer = input(
-            "Do you want to cleat the database? [Yes/no] ").lower()
+        answer = input("Do you want to cleat the database? [Yes/no] ").lower()
 
     while answer.lower() not in ("yes", "no"):
         answer = input("Please answer 'yes' or 'no': ").lower()
@@ -43,3 +42,9 @@ def reset_storage(app, noinput: bool = False):
     storage.stamp()
 
     print("DONE!")
+
+
+@CLI_BUILTINS.register()
+def serve(app):
+    """Run the uvicorn webserver"""
+    return app.webapp.run(app)

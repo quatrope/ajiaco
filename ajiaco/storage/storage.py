@@ -5,10 +5,10 @@ from sqlalchemy import orm
 
 import sqlalchemy_utils as sa_utils
 
-from .models import ModelsContainer, create_models
+from .models import AjcModelsContainer, create_models
 
 
-class StorageSession(orm.Session):
+class AjcStorageSession(orm.Session):
 
     def __init__(self, storage, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -16,7 +16,7 @@ class StorageSession(orm.Session):
 
 
 @attrs.define(frozen=True)
-class Storage:
+class AjcStorage:
 
     engine: sa.Engine
     metadata: sa.MetaData = attrs.field(
@@ -25,13 +25,13 @@ class Storage:
         repr=False,
     )
     session_maker: orm.Session = attrs.field(init=False, repr=False)
-    models: ModelsContainer = attrs.field(init=False, repr=False)
+    models: AjcModelsContainer = attrs.field(init=False, repr=False)
 
     @session_maker.default
     def _session_maker_default(self):
         maker = orm.sessionmaker(
             bind=self.engine,
-            class_=StorageSession,
+            class_=AjcStorageSession,
             storage=self,
         )
         return maker
@@ -67,4 +67,4 @@ class Storage:
         return self.session_maker()
 
     def stamp(self):
-        pass
+        print("'stamp()' implemente me")

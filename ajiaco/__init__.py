@@ -1,4 +1,4 @@
-from .app import Application
+from .app import AjcApplication
 
 __all__ = ["Application"]
 

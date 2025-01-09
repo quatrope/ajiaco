@@ -8,7 +8,7 @@ from ..utils import rtc
 
 
 @attrs.define(frozen=True)
-class CommandTemplate:
+class AjcCommandTemplate:
     name: str
     function: str
     signature: inspect.Signature
@@ -35,7 +35,7 @@ class CommandTemplate:
 
 
 @attrs.define(frozen=True)
-class CommandRegister(abc.Mapping):
+class AjcCommandRegister(abc.Mapping):
 
     name: str = attrs.field(converter=str)
     not_available: frozenset[str] = attrs.field(
@@ -43,7 +43,7 @@ class CommandRegister(abc.Mapping):
         factory=frozenset,
         repr=False,
     )
-    commands_templates: OrderedDict[str, CommandTemplate] = attrs.field(
+    commands_templates: OrderedDict[str, AjcCommandTemplate] = attrs.field(
         init=False, factory=OrderedDict, repr=False
     )
 
@@ -82,7 +82,7 @@ class CommandRegister(abc.Mapping):
                     "need to be used as keyword argument"
                 )
 
-            self.commands_templates[name] = CommandTemplate(
+            self.commands_templates[name] = AjcCommandTemplate(
                 name=name, function=function, signature=signature
             )
             return function

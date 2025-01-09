@@ -16,7 +16,7 @@ import sqlalchemy.orm as orm
 
 
 @attrs.define(frozen=True, repr=False)
-class ModelsContainer(Mapping):
+class AjcModelsContainer(Mapping):
     BaseModel: ...
     models: frozenset
 
@@ -255,7 +255,7 @@ def create_models(metadata: sa.MetaData):
 
     the_models.add(StageHistory)
 
-    models_container = ModelsContainer(
+    models_container = AjcModelsContainer(
         BaseModel=BaseModel, models=frozenset(the_models)
     )
 

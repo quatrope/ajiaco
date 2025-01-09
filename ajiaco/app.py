@@ -1,11 +1,22 @@
+import logging
 import pathlib
 import sys
 
 import attrs
 from attrs import validators as valids
 
-from .cli import CommandRegister, CLIManager, CLI_BUILTINS
-from .storage import Storage
+from .cli import AjcCommandRegister, AjcCLIManager, CLI_BUILTINS
+from .storage import AjcStorage
+from .webapp import AjcWebApp
+
+
+VERBOSE_TO_LOGGING = {
+    0: logging.CRITICAL,  # 50
+    1: logging.ERROR,  # 40
+    2: logging.WARNING,  # 30
+    3: logging.INFO,  # 20
+    4: logging.DEBUG,  # 10
+}
 
 # =============================================================================
 # MAIN PROJECT CLASS
@@ -13,7 +24,7 @@ from .storage import Storage
 
 
 @attrs.define(frozen=True)
-class Application:
+class AjcApplication:
     """Represent a whole Ajiaco project.
 
     This object containt the instances of the games and also has api capable
@@ -29,34 +40,55 @@ class Application:
             valids.instance_of(int), valids.ge(0), valids.le(3)
         ),
     )
-    storage: Storage = attrs.field(
-        converter=(lambda v: Storage.from_url(v) if isinstance(v, str) else v),
-        validator=valids.instance_of(Storage),
-        repr=False,
-    )
-    commands: CommandRegister = attrs.field(
-        init=False,
+
+    logger: logging.Logger = attrs.field(init=False, repr=False)
+
+    storage: AjcStorage = attrs.field(
+        converter=(
+            lambda v: AjcStorage.from_url(v) if isinstance(v, str) else v
+        ),
+        validator=valids.instance_of(AjcStorage),
         repr=False,
     )
 
-    _experiment_sessions_defaults: dict = attrs.field(
-        init=False,
-        factory=dict,
-        validator=valids.instance_of(dict),
-        repr=False,
-    )
+    commands: AjcCommandRegister = attrs.field(init=False, repr=False)
+
+    webapp: AjcWebApp = attrs.field(init=False, repr=False)
+
+    _experiment_sessions_defaults: dict = attrs.field(init=False, repr=False)
 
     # DEFAULTS ================================================================
 
     @storage.default
     def _storage_default(self):
         path = self.app_path / "database.sqlite3"
-        return Storage.from_url(f"sqlite:///{path}")
+
+        log_level = VERBOSE_TO_LOGGING.get(self.verbose, logging.CRITICAL)
+        echo = log_level <= logging.INFO
+
+        return AjcStorage.from_url(f"sqlite:///{path}", echo=echo)
 
     @commands.default
     def _commands_default(self):
         name = f"Commands of '{self.app_path}'"
-        return CommandRegister(name=name, not_available=CLI_BUILTINS)
+        return AjcCommandRegister(name=name, not_available=CLI_BUILTINS)
+
+    @logger.default
+    def _logger_default(self):
+        logger = logging.getLogger(self.filename)
+
+        log_level = VERBOSE_TO_LOGGING.get(self.verbose, logging.CRITICAL)
+        logger.setLevel(log_level)
+
+        return logger
+
+    @webapp.default
+    def _webapp_default(self):
+        return AjcWebApp()
+
+    @_experiment_sessions_defaults.default
+    def _experiment_sessions_default(self):
+        return {}
 
     # API =====================================================================
 
@@ -75,10 +107,10 @@ class Application:
         self._experiment_sessions_defaults.update(kwargs)
 
     def run_from_command_line(self):
-        cli_manager = CLIManager(
-            app=self, commands=[self.commands, CLI_BUILTINS]
+        cli_manager = AjcCLIManager(
+            commands=[self.commands, CLI_BUILTINS]
         )
-        return cli_manager.parse_and_run()
+        return cli_manager.parse_and_run(app=self)
 
     # SCHEMA = {
 
