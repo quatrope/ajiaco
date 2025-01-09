@@ -4,7 +4,6 @@ from starlette.routing import Route
 
 
 class AjcEndpoint:
-
     @classmethod
     def get_path(cls):
         return cls.path

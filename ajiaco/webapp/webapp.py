@@ -6,6 +6,7 @@ import uvicorn
 
 from . import routes
 
+
 @attrs.define(frozen=True)
 class AjcWebApp:
 

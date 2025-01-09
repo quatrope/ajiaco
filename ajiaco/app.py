@@ -107,9 +107,7 @@ class AjcApplication:
         self._experiment_sessions_defaults.update(kwargs)
 
     def run_from_command_line(self):
-        cli_manager = AjcCLIManager(
-            commands=[self.commands, CLI_BUILTINS]
-        )
+        cli_manager = AjcCLIManager(commands=[self.commands, CLI_BUILTINS])
         return cli_manager.parse_and_run(app=self)
 
     # SCHEMA = {

@@ -1,17 +1,16 @@
-
 import ajiaco as ajc
 
 
 app = ajc.AjcApplication(
     filename=__file__,
     secret="xcsosslbRaiSUBJUO5Dn42F4Ym4dXETrnxfJjd+YJS4=",
-    verbose=True)
+    verbose=True,
+)
 
 
 app.set_experiment_sessions_defaults(
-    doc="",
-    currency_per_point=0.1,
-    participation_fee=1.0)
+    doc="", currency_per_point=0.1, participation_fee=1.0
+)
 
 
 # =============================================================================

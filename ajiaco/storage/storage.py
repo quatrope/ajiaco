@@ -9,7 +9,6 @@ from .models import AjcModelsContainer, create_models
 
 
 class AjcStorageSession(orm.Session):
-
     def __init__(self, storage, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.storage = storage

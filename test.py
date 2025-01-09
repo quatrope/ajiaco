@@ -4,6 +4,8 @@ url = "firebird+firebird://sysdba:masterkey@localhost///home/juanbc/proyectos/aj
 
 stg = storage.AjcStorage.from_url(url)
 
-import ipdb; ipdb.set_trace()
+import ipdb
+
+ipdb.set_trace()
 with stg.transaction() as ses:
     ses.create_tables()
