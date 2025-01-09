@@ -1,6 +1,8 @@
+import importlib
+
 from .app import AjcApplication
 
-__all__ = ["Application"]
+__all__ = ["AjcApplication"]
 
 
-VERSION = 0.2
+VERSION = importlib.metadata.version("ajiaco")

@@ -9,6 +9,8 @@ import attrs
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
 
+from ..utils import sysinfo
+
 
 # =============================================================================
 # MODELS CONTAINER
@@ -18,10 +20,11 @@ import sqlalchemy.orm as orm
 @attrs.define(frozen=True, repr=False)
 class AjcModelsContainer(Mapping):
     BaseModel: ...
+    Stamp: ...
     models: frozenset
 
     def items(self):
-        for model in it.chain([self.BaseModel], self.models):
+        for model in it.chain([self.BaseModel, self.Stamp], self.models):
             name = model.__name__
             yield name, model
 
@@ -44,7 +47,7 @@ class AjcModelsContainer(Mapping):
         return (name for name, _ in self.items())
 
     def __len__(self):
-        return len(self.models) + 1  # + BaseModel
+        return len(self.models) + 2  # + BaseModel + StampModel
 
     def __repr__(self):
         models = set(self.keys())
@@ -54,10 +57,6 @@ class AjcModelsContainer(Mapping):
 # =============================================================================
 # MODELS CREATION
 # =============================================================================
-
-
-def _utcnow():
-    return dt.datetime.now(dt.timezone.utc)
 
 
 def create_models(metadata: sa.MetaData):
@@ -74,7 +73,7 @@ def create_models(metadata: sa.MetaData):
         id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
         created_at: orm.Mapped[dt.datetime] = orm.mapped_column(
             sa.DateTime(timezone=True),
-            default=_utcnow,
+            default=sysinfo.utcnow,
             nullable=False,
         )
 
@@ -90,6 +89,14 @@ def create_models(metadata: sa.MetaData):
         extra_schema: orm.Mapped[Optional[bytes]] = orm.mapped_column(
             sa.String, nullable=True
         )
+
+    # Third the stamp =========================================================
+
+    class Stamp(IDAndCreatedAtModelABC):
+
+        __tablename__ = "ajc_stamp"
+
+        data: orm.Mapped[dict] = orm.mapped_column(sa.JSON)
 
     # Store all models for easy return ========================================
     the_models = set()
@@ -128,7 +135,7 @@ def create_models(metadata: sa.MetaData):
             sa.ForeignKey("ajc_sessions.id"), nullable=False
         )
         session: orm.Mapped[ExperimentSessionModel] = orm.relationship(
-            back_populates="subjects", lazy=False
+            backref="subjects", lazy=False
         )
 
     the_models.add(SubjectModel)
@@ -156,7 +163,7 @@ def create_models(metadata: sa.MetaData):
             sa.ForeignKey("ajc_sessions.id"), nullable=False
         )
         session: orm.Mapped[ExperimentSessionModel] = orm.relationship(
-            back_populates="rounds", lazy=False
+            backref="rounds", lazy=False
         )
 
     the_models.add(RoundModel)
@@ -172,7 +179,7 @@ def create_models(metadata: sa.MetaData):
             sa.ForeignKey("ajc_rounds.id"), nullable=False
         )
         round: orm.Mapped[RoundModel] = orm.relationship(
-            back_populates="groups", lazy=False
+            backref="groups", lazy=False
         )
 
     the_models.add(GroupModel)
@@ -191,15 +198,13 @@ def create_models(metadata: sa.MetaData):
         group_id: orm.Mapped[int] = orm.mapped_column(
             sa.ForeignKey("ajc_groups.id"), nullable=False
         )
-        group: orm.Mapped[GroupModel] = orm.relationship(
-            back_populates="roles"
-        )
+        group: orm.Mapped[GroupModel] = orm.relationship(backref="roles")
 
         subject_id: orm.Mapped[int] = orm.mapped_column(
             sa.ForeignKey("ajc_subjects.id"), nullable=False
         )
         subject: orm.Mapped[SubjectModel] = orm.relationship(
-            back_populates="roles", lazy=False
+            backref="roles", lazy=False
         )
 
     the_models.add(Role)
@@ -235,13 +240,13 @@ def create_models(metadata: sa.MetaData):
         role_id: orm.Mapped[id] = orm.mapped_column(
             sa.ForeignKey("ajc_roles.id"), nullable=False
         )
-        role: orm.Mapped[Role] = orm.relationship(back_populates="stages")
+        role: orm.Mapped[Role] = orm.relationship(backref="stages")
 
         subject_id: orm.Mapped[int] = orm.mapped_column(
             sa.ForeignKey("ajc_subjects.id"), nullable=False
         )
         subject: orm.Mapped[SubjectModel] = orm.relationship(
-            back_populates="stages", lazy=False
+            backref="stages", lazy=False
         )
 
         @property
@@ -250,13 +255,15 @@ def create_models(metadata: sa.MetaData):
                 self.timeout
                 and self.enter_dt
                 and self.expire_dt
-                and _utcnow() >= self.expire_dt
+                and sysinfo.utcnow() >= self.expire_dt
             )
 
     the_models.add(StageHistory)
 
     models_container = AjcModelsContainer(
-        BaseModel=BaseModel, models=frozenset(the_models)
+        BaseModel=BaseModel,
+        Stamp=Stamp,
+        models=frozenset(the_models),
     )
 
     return models_container

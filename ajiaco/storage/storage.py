@@ -1,3 +1,5 @@
+import contextlib
+
 import attrs
 
 import sqlalchemy as sa
@@ -12,6 +14,39 @@ class AjcStorageSession(orm.Session):
     def __init__(self, storage, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.storage = storage
+
+    @property
+    def models(self):
+        return self.storage.models
+
+    def get_stamp(self):
+        stamp = self.query(self.models.Stamp).first()
+        return stamp.data if stamp else None
+
+    def stamp(self, data):
+        Stamp = self.models.Stamp
+        if self.get_stamp() is not None:
+            raise ValueError("Database already stamped")
+        stamp = Stamp(data=data)
+        self.add(stamp)
+
+
+class AjcTransactionConectManager(contextlib.AbstractContextManager):
+    """Provide a transactional scope around a series of operations."""
+
+    def __init__(self, session_maker):
+        self._session_maker = session_maker
+
+    def __enter__(self):
+        self._session = self._session_maker()
+        return self._session
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type:
+            self._session.rollback()
+        else:
+            self._session.commit()
+        self._session.close()
 
 
 @attrs.define(frozen=True)
@@ -63,7 +98,4 @@ class AjcStorage:
         return BaseModel.metadata.create_all(self.engine)
 
     def transaction(self):
-        return self.session_maker()
-
-    def stamp(self):
-        print("'stamp()' implemente me")
+        return AjcTransactionConectManager(self.session_maker)

@@ -1,6 +1,5 @@
 import logging
 import pathlib
-import sys
 
 import attrs
 from attrs import validators as valids
@@ -91,6 +90,12 @@ class AjcApplication:
         return {}
 
     # API =====================================================================
+
+    @property
+    def version(self):
+        from . import VERSION
+
+        return VERSION
 
     @property
     def app_path(self):
