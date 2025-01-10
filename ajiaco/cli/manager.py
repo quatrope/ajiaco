@@ -4,10 +4,11 @@ from attrs import validators as valids
 import typer
 
 from .register import AjcCommandRegister
+from .cli_logo import CLI_LOGO
 
 
 _TYPER_CONFIG = {
-    "help": "foo",
+    "help": "{CLI_LOGO} command-line interface",
     "no_args_is_help": True,
 }
 

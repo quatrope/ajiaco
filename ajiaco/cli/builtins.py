@@ -11,23 +11,41 @@ from .register import AjcCommandRegister
 
 from ..utils import sysinfo
 
+from .cli_logo import CLI_LOGO
 
-AJC = "🥔🌽🍗🌿"
 
 CLI_BUILTINS = AjcCommandRegister("BUILTINS")
 
 
 @CLI_BUILTINS.register
 def version(app):
-    "Show the version of Ajiaco and exit"
+    """Display Ajiaco version information.
 
-    rich.print(f"​{AJC}​ Ajiaco v.{app.version}")
+
+    Display the current version of Ajiaco and exit. Useful for checking
+    the installed version or including version information in bug reports.
+
+    """
+    rich.print(f"{CLI_LOGO} v.{app.version}")
 
 
 @CLI_BUILTINS.register(name="reset-storage")
 def reset_storage(app, noinput: bool = False):
-    "pass"
+    """Reset the database storage to its initial state.
 
+    Completely resets the storage database by:
+
+    1. Deleting the existing storage if it exists
+
+    2. Creating a new storage
+
+    3. Creating the schema
+
+    4. Adding system information stamp
+
+    This operation is irreversible. All existing data will be lost.
+    Requires confirmation unless --noinput is specified.
+    """
     answer = noinput or prompt.Confirm.ask(
         "⚠️  Do you want to clear the database?"
     )
@@ -63,9 +81,19 @@ def reset_storage(app, noinput: bool = False):
     rich.print("🏁 DONE")
 
 
-@CLI_BUILTINS.register(name="storage-stamp")
-def storage_stamp(app):
-    """Show the stamp inside the storage"""
+@CLI_BUILTINS.register(name="show-storage-stamp")
+def show_storage_stamp(app):
+    """Display storage metadata and creation information.
+
+    Shows the stamp information stored in the database, including:
+
+    - Creation timestamp
+
+    - System information at creation time
+
+    - Ajiaco version used to create the storage
+
+    """
     with app.storage.transaction() as conn:
         stamp = conn.get_stamp()
 
@@ -74,10 +102,18 @@ def storage_stamp(app):
 
 @CLI_BUILTINS.register()
 def webserver(app, host: str = "localhost", port: int = 2501):
-    """Run the uvicorn webserver"""
+    """Start the Ajiaco web interface server.
 
-    rich.print(f"​{AJC}​ Starting Webserver for Ajiaco v.{app.version}")
-    rich.print(f"⏰ {dt.datetime.now()}")
+    Launches a uvicorn web server that provides a web interface
+    for interacting with Ajiaco. Using host 0.0.0.0 makes the server
+    accessible from other machines. The server runs until interrupted
+    with Ctrl+C.
+
+    """
+    now = dt.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+    rich.print(f"​{CLI_LOGO}​ v.{app.version}")
+    rich.print(f"🦄 Starting Webserver - {now}")
+    rich.print(rule.Rule())
 
     return app.webapp.run(app, host=host, port=port)
 
@@ -88,17 +124,54 @@ def webserver(app, host: str = "localhost", port: int = 2501):
 
 
 def _run_plain(slocals):
+    """Run a plain Python interactive console.
+
+    Parameters
+    ----------
+    slocals : dict
+        Dictionary of local variables for the interactive session.
+
+    Returns
+    -------
+    InteractiveConsole
+        The console instance.
+    """
     console = code.InteractiveConsole(slocals)
     console.interact("")
     return console
 
 
 def _run_ipython(slocals):
+    """Run an IPython interactive shell.
+
+    Parameters
+    ----------
+    slocals : dict
+        Dictionary of local variables for the interactive session.
+
+    Returns
+    -------
+    IPythonShell
+        The IPython shell instance.
+    """
     return start_ipython(argv=[], user_ns=slocals)
 
 
 def _create_banner(app, slocals):
+    """Create a banner with application information for the shell.
 
+    Parameters
+    ----------
+    app : AjiacoApp
+        The main application instance.
+    slocals : dict
+        Dictionary of local variables to display in the banner.
+
+    Returns
+    -------
+    str
+        Formatted banner string.
+    """
     lines = []
     bullets = it.cycle(("🔹", "🔸"))
     for lname, lvalue in sorted(slocals.items()):
@@ -108,7 +181,7 @@ def _create_banner(app, slocals):
 
     banner_parts = (
         [""]
-        + [f"​{AJC}​ Ajiaco v.{app.version}"]
+        + [f"​{CLI_LOGO} v.{app.version}"]
         + [f"📦 Running inside: '{app.app_path}'"]
         + ["🏷️  Variables:"]
         + lines
@@ -122,7 +195,23 @@ def _create_banner(app, slocals):
 
 @CLI_BUILTINS.register()
 def shell(app, plain: bool = False):
-    """Run the Python shell inside Ajiaco environment"""
+    """Launch an interactive Python shell with Ajiaco environment.
+
+    Starts an interactive Python shell with the Ajiaco application context
+    pre-loaded. By default uses IPython for enhanced features, but can
+    fall back to plain Python shell if requested.
+
+    The environment includes the following pre-loaded variables:
+
+    - app: The main application instance
+
+    - conn: Active database connection
+
+    IPython shell provides enhanced features like tab completion.
+    All database operations are executed within a transaction.
+    Exit the shell with exit() or Ctrl+D.
+
+    """
     slocals = {"app": app}
 
     with app.storage.transaction() as conn:
