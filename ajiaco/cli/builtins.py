@@ -19,7 +19,6 @@ from ..utils import sysinfo
 CLI_BUILTINS = AjcCommandRegister("BUILTINS")
 
 
-
 @CLI_BUILTINS.register
 def version(app):
     "Show the version of Ajiaco and exit"
