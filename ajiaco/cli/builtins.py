@@ -12,6 +12,8 @@ from .register import AjcCommandRegister
 from ..utils import sysinfo
 
 
+AJC = "🥔🌽🍗🌿"
+
 CLI_BUILTINS = AjcCommandRegister("BUILTINS")
 
 
@@ -19,7 +21,7 @@ CLI_BUILTINS = AjcCommandRegister("BUILTINS")
 def version(app):
     "Show the version of Ajiaco and exit"
 
-    rich.print(f"​🥔​ Ajiaco v.{app.version}")
+    rich.print(f"​{AJC}​ Ajiaco v.{app.version}")
 
 
 @CLI_BUILTINS.register(name="reset-storage")
@@ -74,7 +76,7 @@ def storage_stamp(app):
 def webserver(app, host: str = "localhost", port: int = 2501):
     """Run the uvicorn webserver"""
 
-    rich.print(f"​🥔​ Starting Webserver for Ajiaco v.{app.version}")
+    rich.print(f"​{AJC}​ Starting Webserver for Ajiaco v.{app.version}")
     rich.print(f"⏰ {dt.datetime.now()}")
 
     return app.webapp.run(app, host=host, port=port)
@@ -106,7 +108,7 @@ def _create_banner(app, slocals):
 
     banner_parts = (
         [""]
-        + [f"​🥔​ Ajiaco v.{app.version}"]
+        + [f"​{AJC}​ Ajiaco v.{app.version}"]
         + [f"📦 Running inside: '{app.app_path}'"]
         + ["🏷️  Variables:"]
         + lines
