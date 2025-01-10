@@ -1,8 +1,15 @@
 import collections
 import code
-import pprint
+import datetime as dt
+import itertools as it
+import random
 
 from IPython import start_ipython
+
+import typer
+
+import rich
+from rich import progress, prompt
 
 from .register import AjcCommandRegister
 
@@ -12,45 +19,49 @@ from ..utils import sysinfo
 CLI_BUILTINS = AjcCommandRegister("BUILTINS")
 
 
+
 @CLI_BUILTINS.register
 def version(app):
     "Show the version of Ajiaco and exit"
-    print(f"Ajiaco v.{app.version}")
+    rich.print(f"​🥔​ Ajiaco v.{app.version}")
 
 
 @CLI_BUILTINS.register(name="reset-storage")
 def reset_storage(app, noinput: bool = False):
     "pass"
-    if noinput:
-        answer = "yes"
-    else:
-        answer = input("Do you want to cleat the database? [Yes/no] ").lower()
 
-    while answer.lower() not in ("yes", "no"):
-        answer = input("Please answer 'yes' or 'no': ").lower()
+    answer = noinput or prompt.Confirm.ask(
+        "⚠️  Do you want to clear the database?"
+    )
 
-    if answer == "no":
+    if not answer:
         return
 
     storage = app.storage
-    print(f"Target: {storage}")
-    print("  - Deleting Storage...")
-    if storage.exists():
-        storage.drop_storage()
 
-    print("  - Creating Storage...")
-    storage.create_storage()
+    rich.print(f"​🎯​ Target -- {storage!r}")
+    with rich.progress.Progress(
+        progress.SpinnerColumn(),
+        progress.TextColumn("[progress.description]{task.description}"),
+        transient=False,
+    ) as prgss:
+        if storage.exists():
+            prgss.add_task(description="🧹 Deleting Storage", total=None)
+            storage.drop_storage()
 
-    print("  - Creating Schema...")
-    storage.create_schema()
+        prgss.add_task(description="📄 Creating Storage​")
+        storage.create_storage()
 
-    print("  - Stamping...")
-    stamp_data = sysinfo.info_dict()
-    stamp_data["AJIACO_VERSION"] = app.version
-    with storage.transaction() as conn:
-        conn.stamp(stamp_data)
+        prgss.add_task(description="✏️​  Creating Schema")
+        storage.create_schema()
 
-    print("DONE!")
+        prgss.add_task(description="​🪪​ Stamping")
+        stamp_data = sysinfo.info_dict()
+        stamp_data["AJIACO_VERSION"] = app.version
+        with storage.transaction() as conn:
+            conn.stamp(stamp_data)
+
+    rich.print("🏁 DONE")
 
 
 @CLI_BUILTINS.register(name="storage-stamp")
@@ -58,13 +69,19 @@ def storage_stamp(app):
     """Show the stamp inside the storage"""
     with app.storage.transaction() as conn:
         stamp = conn.get_stamp()
-    pprint.pprint(stamp)
+    rich.print(stamp)
 
 
 @CLI_BUILTINS.register()
-def serve(app):
+def webserver(app, host: str = "localhost", port: int = 2501):
     """Run the uvicorn webserver"""
-    return app.webapp.run(app)
+
+    rich.print(f"​🥔​ Starting Webserver for Ajiaco v.{app.version}")
+
+    clocks = "🕛🕧🕐🕜🕑🕝🕒🕞🕓🕟🕔🕠🕕🕡🕖🕢🕗🕣🕘🕤🕙🕥🕚🕦"
+    rich.print(f"{random.choice(clocks)} Current time : {dt.datetime.now()}")
+
+    return app.webapp.run(app, host=host, port=port)
 
 
 # =============================================================================
@@ -72,36 +89,29 @@ def serve(app):
 # =============================================================================
 
 
-def _run_plain(slocals, banner):
+def _run_plain(slocals):
     console = code.InteractiveConsole(slocals)
-    console.interact(banner)
+    return console
 
 
-def _run_ipython(slocals, banner):
-    start_ipython(
-        argv=["--TerminalInteractiveShell.banner2={}".format(banner)],
-        user_ns=slocals,
-    )
+def _run_ipython(slocals):
+    return start_ipython(argv=[], user_ns=slocals)
 
 
 def _create_banner(app, slocals):
 
-    by_module = collections.defaultdict(list)
-    for k, v in slocals.items():
-        module_name = getattr(v, "__module__", None) or ""
-        by_module[module_name].append(k)
-
     lines = []
-    for module_name, imported in sorted(by_module.items()):
-        prefix = ", ".join(imported)
-        suffix = "({})".format(module_name) if module_name else ""
-        line = "\t>>> {} {}".format(prefix, suffix)
+    bullets = it.cycle(("🔹", "🔸"))
+    for lname, lvalue in sorted(slocals.items()):
+        ltype = type(lvalue).__name__
+        line = f"\t{next(bullets)} {lname}: {ltype!r}"
         lines.append(line)
 
     banner_parts = (
-        [f"Ajiaco Version: \n\t{app.version}"]
-        + [f"Running inside: \n\t{app.app_path}"]
-        + ["Ajiaco Variables:"]
+        [""]
+        + [f"​🥔​ Ajiaco v.{app.version}"]
+        + [f"⚙️  Running inside: '{app.app_path}'"]
+        + ["📊 Variables:"]
         + lines
         + [""]
     )
@@ -118,6 +128,9 @@ def shell(app, plain: bool = False):
 
     with app.storage.transaction() as conn:
         slocals["conn"] = conn
+
         banner = _create_banner(app, slocals)
+        rich.print(banner)
+
         shell = _run_plain if plain else _run_ipython
-        return shell(slocals, banner)
+        return shell(slocals)

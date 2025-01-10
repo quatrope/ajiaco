@@ -11,20 +11,14 @@ from . import routes
 class AjcWebApp:
 
     webapp: Starlette = attrs.field(init=False, repr=False)
-    uvicorn_kwargs: dict = attrs.field(converter=dict)
 
     @webapp.default
     def _webapp_default(self):
         the_webapp = Starlette(routes=routes.ROUTES)
         return the_webapp
 
-    @uvicorn_kwargs.default
-    def _uvicorn_kwargs_default(self):
-        return {}
-
     # API =============================================================================
 
-    def run(self, app):
+    def run(self, app, **uvicorn_kwargs):
         the_webapp = self.webapp
-        the_kwargs = self.uvicorn_kwargs
-        return uvicorn.run(the_webapp, **the_kwargs)
+        return uvicorn.run(the_webapp, **uvicorn_kwargs)
