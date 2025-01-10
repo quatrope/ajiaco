@@ -1,15 +1,11 @@
-import collections
 import code
 import datetime as dt
 import itertools as it
-import random
 
 from IPython import start_ipython
 
-import typer
-
 import rich
-from rich import progress, prompt
+from rich import progress, prompt, rule
 
 from .register import AjcCommandRegister
 
@@ -22,6 +18,7 @@ CLI_BUILTINS = AjcCommandRegister("BUILTINS")
 @CLI_BUILTINS.register
 def version(app):
     "Show the version of Ajiaco and exit"
+
     rich.print(f"​🥔​ Ajiaco v.{app.version}")
 
 
@@ -38,23 +35,24 @@ def reset_storage(app, noinput: bool = False):
 
     storage = app.storage
 
-    rich.print(f"​🎯​ Target -- {storage!r}")
+    rich.print(f"​🎯​ Target -- {storage}")
+
     with rich.progress.Progress(
         progress.SpinnerColumn(),
         progress.TextColumn("[progress.description]{task.description}"),
         transient=False,
     ) as prgss:
         if storage.exists():
-            prgss.add_task(description="🧹 Deleting Storage", total=None)
+            prgss.add_task(description="- Deleting Old Storage", total=None)
             storage.drop_storage()
 
-        prgss.add_task(description="📄 Creating Storage​")
+        prgss.add_task(description="- Creating Storage​")
         storage.create_storage()
 
-        prgss.add_task(description="✏️​  Creating Schema")
+        prgss.add_task(description="- Creating Schema")
         storage.create_schema()
 
-        prgss.add_task(description="​🪪​ Stamping")
+        prgss.add_task(description="- Stamping")
         stamp_data = sysinfo.info_dict()
         stamp_data["AJIACO_VERSION"] = app.version
         with storage.transaction() as conn:
@@ -68,6 +66,7 @@ def storage_stamp(app):
     """Show the stamp inside the storage"""
     with app.storage.transaction() as conn:
         stamp = conn.get_stamp()
+
     rich.print(stamp)
 
 
@@ -76,9 +75,7 @@ def webserver(app, host: str = "localhost", port: int = 2501):
     """Run the uvicorn webserver"""
 
     rich.print(f"​🥔​ Starting Webserver for Ajiaco v.{app.version}")
-
-    clocks = "🕛🕧🕐🕜🕑🕝🕒🕞🕓🕟🕔🕠🕕🕡🕖🕢🕗🕣🕘🕤🕙🕥🕚🕦"
-    rich.print(f"{random.choice(clocks)} Current time : {dt.datetime.now()}")
+    rich.print(f"⏰ {dt.datetime.now()}")
 
     return app.webapp.run(app, host=host, port=port)
 
@@ -90,6 +87,7 @@ def webserver(app, host: str = "localhost", port: int = 2501):
 
 def _run_plain(slocals):
     console = code.InteractiveConsole(slocals)
+    console.interact("")
     return console
 
 
@@ -109,8 +107,8 @@ def _create_banner(app, slocals):
     banner_parts = (
         [""]
         + [f"​🥔​ Ajiaco v.{app.version}"]
-        + [f"⚙️  Running inside: '{app.app_path}'"]
-        + ["📊 Variables:"]
+        + [f"📦 Running inside: '{app.app_path}'"]
+        + ["🏷️  Variables:"]
         + lines
         + [""]
     )
@@ -130,6 +128,7 @@ def shell(app, plain: bool = False):
 
         banner = _create_banner(app, slocals)
         rich.print(banner)
+        rich.print(rule.Rule())
 
         shell = _run_plain if plain else _run_ipython
         return shell(slocals)
