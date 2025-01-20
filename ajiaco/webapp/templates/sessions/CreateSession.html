@@ -1,0 +1,59 @@
+{% extends "sessions/BaseSessions.html" %}
+
+{% block title %}
+    {% if is_demo %}
+        Creatting demo session {{ experiment.display }}
+    {% else %}
+        Creatting session {{ experiment.display }}
+    {% endif %}
+
+{% endblock %}
+
+{% block content %}
+<form method="post" id="create-session-form" action="{{ reverse_url('create_session', session_type, experiment.name) }}">
+    {{ xsrf_form_html() }}
+</form>
+{% endblock content %}
+
+
+{% block scripts %}
+<script>
+$(document).ready(function(){
+    function submit(){
+        $("form#create-session-form").submit();
+    }
+
+    $('#createModal').on('show.bs.modal', function(){
+        setTimeout(submit, 1000);
+    });
+    $("#createModal").modal();
+});
+</script>
+{% endblock scripts %}
+
+
+{% block modals %}
+<div class="modal fade" id="createModal" tabindex="-1" data-keyboard="false" data-backdrop="static" role="dialog" aria-labelledby="createModalCenterTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+            <p class="text-center">
+
+                <h5 class="modal-title" id="exampleModalLongTitle">
+                    {% if is_demo %}
+                        Creating demo session <span class="text-info">{{ experiment.display }}</span>
+                    {% else %}
+                        Creating <span class="text-info">{{ experiment.display }}</span>
+                    {% endif %}
+                </h5>
+            </p>
+      </div>
+      <div class="modal-body text-center">
+            <img style="width: 15%;"src="{{ static_url('imgs/gears.gif') }}"></img>
+            <hr>
+            Please wait...
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock modals %}

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="utf-8" />
+<title>Ajiaco - {% block title %}{% endblock %}</title>
+<meta name="generator" content="Ajiaco Team" />
+
+<!-- For bootstrap -->
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+<!-- global styles -->
+{% block global_style %}
+<link rel="stylesheet" href="{{ url_for('static', path='bootstrap/css/bootstrap.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='tabs/tabs.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='ajiaco.css') }}">
+<style>
+body {
+    display: none;
+}
+</style>
+{% endblock global_style %}
+
+<!-- global app-styles -->
+{% block app_style %}
+{% endblock app_style %}
+
+<!-- global custom-styles -->
+{% block styles %}
+{% endblock styles %}
+
+</head>
+
+<body class="{% block body_class %}{% endblock %}">
+        {% block global_scripts %}
+        <!--global scripts-->
+        <script src="{{ url_for('static', path='jquery/jquery-3.3.1.min.js') }}" ></script>
+        <script src="{{ url_for('static', path='popper.js/popper.min.js') }}"></script>
+        <script src="{{ url_for('static', path='bootstrap/js/bootstrap.min.js') }}"></script>
+        <script defer src="{{ url_for('static', path='fontawesome/js/fontawesome-all.min.js') }}"></script>
+
+        <script defer src="{{ url_for('static', path='clipboard.js/clipboard.min.js') }}"></script>
+
+        <script defer src="{{ url_for('static', path='Brython-3.6.2/brython.js') }}"></script>
+        <script defer src="{{ url_for('static', path='tabs/tabs.js') }}"></script>
+
+        <script src="{{ url_for('static', path='ajiaco.js') }}"></script>
+
+        <!-- Global initializations -->
+        <script>
+        $(document).ready(function(){
+            new ClipboardJS('.btn-copy');
+            brython();
+
+            $("body").fadeIn("fast");
+        });
+        </script>
+        {% endblock global_scripts %}
+
+        <div id="wrapper">
+            <!-- page pre-content -->
+            {% block pre_content %}
+            {% endblock %}
+
+            <!-- page content -->
+            <div id="page-content-wrapper">
+                <div class="container-fluid">
+                    <div>
+                        <h1>{% block page_title %}{{ page_title }}{% endblock %}</h1>
+                        <hr>
+                    </div>
+                {% block content %}
+                EMPTY
+                {% endblock %}
+                </div>
+            </div>
+
+            <!-- page post-content -->
+            {% block post_content %}
+            {% endblock %}
+        </div>
+
+        <div>
+            <!-- app modals -->
+            {% block app_modals %}
+            {% endblock app_modals %}
+
+            <!-- modals -->
+            {% block modals %}
+            {% endblock modals %}
+        </div>
+
+        <!-- app scripts -->
+        {% block app_scripts %}
+        {% endblock app_scripts %}
+
+        <!-- page custom script -->
+        {% block scripts %}
+        {% endblock scripts %}
+</body>
+
+</html>

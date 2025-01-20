@@ -1,0 +1,85 @@
+{% extends "Base.html" %}
+
+{% block title %} Ajiaco Error {{ status_code }} {% endblock %}
+{% block page_title %}
+    Ajiaco Error {{ status_code }}
+    {% if has_exc %} - {{ evalue.log_message or etype.__name__ }} {% endif %}
+
+{% endblock %}
+
+{% block styles %}
+<style>
+div#traceback .code {
+    width: 100% !important;
+}
+</style>
+{% endblock %}
+
+{% block body_class %}alert alert-warning{% endblock %}
+
+{% block content %}
+<div >
+    <h3 class="alert-heading">Status</h3>
+    <small>
+    <ul>
+        <li><b>Request Method:</b> {{ request.method }}</li>
+        <li><b>Request URL:</b> {{ request.full_url() }}</li>
+        <li><b>Ajiaco Version:</b> {{ prj.version() }}</li>
+        {% if has_exc %}
+        <li><b>Exception:</b> {{ evalue }}</li>
+        {% endif %}
+        <li><b>Python Excecutable:</b> {{ py_executable }}</li>
+        <li><b>Python Version:</b> {{ py_version }}</li>
+        <li><b>Server Time:</b> {{ server_time }}</li>
+    </ul>
+    </small>
+
+    {% if has_exc %}
+    <div id="traceback">
+        <textarea style="display: none;" id="traceback-area">{{ s_traceback }}</textarea>
+        <h3>Traceback
+            <span>
+                <button class="btn btn-copy btn-sm" data-clipboard-target="#traceback-area" data-toggle="tooltip" title="Copy to clipboard">
+                    <i class="fas fa-copy"></i> Copy
+                </button>
+                <button class="btn btn-sm" id="dpaste" data-toggle="tooltip" title="Public Paste" >
+                    <i class="fas fa-share"></i> Share
+                </button>
+                <a style="display: none;" href="" target="_blank" class="btn btn-success btn-sm" id="dpaste-link">
+                    <i class="fas fa-link"></i> <b>Open:</b> <span id="dpaste-link-text"></span>
+                </a>
+            </span>
+        </h3>
+        <div>
+            {{hls_traceback}}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+
+{% block app_scripts %}
+<script>
+$(document).ready(function(){
+
+    var DPASTE_URL = "http://dpaste.com/api/v2/";
+
+    $("button#dpaste").click(function(){
+        $("button#dpaste").hide("fast");
+        var data = {
+            syntax: "py3tb",
+            poster: "{{ username }}:Ajiaco_{{ prj.version() }}@{{ hostname }}",
+            content: $("#traceback-area").val()
+        }
+
+        $.post(DPASTE_URL, data).done(function(response){
+            $("a#dpaste-link").attr("href", response);
+            $("a#dpaste-link #dpaste-link-text").text(response);
+            $("a#dpaste-link").show("fast");
+        });
+
+    });
+});
+</script>
+{% endblock app_scripts %}

@@ -1,0 +1,56 @@
+{% extends "sessions/BaseSessions.html" %}
+
+{% block title %}
+    {% if session.demo %}
+        Demo Session: {{ session.experiment.display }}
+    {% else %}
+        Session: {{ session.experiment.display }}
+    {% endif %}
+    - {{ session.code }}
+{% endblock %}
+
+{% block page_title %}
+
+        {% if session.demo %}
+            Demo Session: {{ session.experiment.display }}
+        {% else %}
+            Session: {{ session.experiment.display }}
+        {% endif %}
+        - <code>{{ session.code }}</code>
+{% endblock %}
+
+
+{% block content %}
+<div class="container">
+
+<div class="tab-button-outer">
+    <ul id="tab-button">
+      <li><a href="#links">Links</a></li>
+      <li><a href="#data">Data</a></li>
+      <li><a href="#monitor">Monitor</a></li>
+    </ul>
+  </div>
+  <div class="tab-select-outer">
+    <select id="tab-select">
+      <option value="#links">Links</option>
+      <option value="#data">Data</option>
+      <option value="#monitor">Monitor</option>
+    </select>
+  </div>
+
+  <div id="links" class="tab-contents">
+    {% include "sessions/Show/links.html" %}
+  </div>
+
+  <div id="data" class="tab-contents">
+    {% include "sessions/Show/data.html" %}
+  </div>
+
+  <div id="monitor" class="tab-contents">
+    {% include "sessions/Show/monitor.html" %}
+  </div>
+
+</div>
+
+</div>
+{% endblock content %}

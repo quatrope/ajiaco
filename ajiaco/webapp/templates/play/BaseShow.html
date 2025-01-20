@@ -1,0 +1,44 @@
+{% extends "play/BasePlay.html" %}
+
+{% block pre_content %}
+{% if page.has_timeout %}
+<div id="timer-container" class="fixed-top alert alert-warning text-center">
+    Remaining time - <strong id="timer"></strong>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<form method="post" id="next-page" action="{{ reverse_url('play', page.subject.code) }}">
+    {{ xsrf_form_html() }}
+    {% block form %}{% endblock form %}
+</form>
+{% endblock content %}
+
+
+{% block app_scripts %}
+<script src="{{ static_url('jquery.countdown-2.2.0/jquery.countdown.js') }}"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+    $("form#next-page").submit(function(){
+        $("div#page-content-wrapper").fadeOut("fast");
+    });
+
+    {% if page.has_timeout %}
+        var $timerContainer = $("#timer-container");
+        var $timer = $("#timer-container #timer");
+        $timer.countdown(
+            new Date().getTime() + {{ page.remaining_ms }}
+        ).on("update.countdown", function(event){
+            $timer.text(event.strftime('%-N:%S'));
+            if(!$timerContainer.hasClass("alert-danger") && event.offset.totalSeconds <= 20)
+                $timerContainer.addClass("alert-danger");
+        }).on('finish.countdown', function(event) {
+            $("div#page-content-wrapper").fadeOut("fast");
+            $("form#next-page").submit();
+        });
+    {% endif %}
+
+});
+</script>
+{% endblock app_scripts %}

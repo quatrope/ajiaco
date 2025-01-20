@@ -1,0 +1,47 @@
+{% extends "admin/BaseAdmin.html" %}
+
+{% block title %} Demo {% endblock %}
+{% block page_title %} Demo {% endblock %}
+
+{% block content %}
+<div>
+<div id="demo-accordion">
+    {% for ename, exp in prj.experiments.items() %}
+    <div class="card">
+        <div class="card-header" id="heading-{{ ename }}">
+            <h5 class="mb-0">
+                <button class="btn btn-link" data-toggle="collapse" data-target="#collapse-{{ ename }}" aria-expanded="true" aria-controls="collapse-{{ ename }}">
+                    {{ exp.display }}
+                </button>
+                <span class="badge badge-secondary float-right">
+                    <i class="fas fa-user"></i> x {{ exp.demo_subjects }}
+                </span>
+            </h5>
+        </div>
+        <div id="collapse-{{ ename }}" class="collapse" aria-labelledby="headingOne" data-parent="#demo-accordion">
+            <div class="card-body">
+                <h3>Steps</h3>
+                <ol class="text-secondary rounds-ol">
+                    {% for gie in exp.games %}
+                    <li>
+                        <span>{{ gie.game.display }}</span>
+                        {% if gie.part > 1 %}
+                        - <code class="text-info">Part {{ gie.part }}</code>
+                        {% endif %}
+                        - <code>Round {{ gie.round_number }}</code>
+                    </li>
+                    {% endfor %}
+                </ol>
+                <hr>
+                <div>
+                    <a target="_blank" href="{{ reverse_url('create_session', 'demo', exp.name) }}" class="create-session btn btn-primary btn-block">
+                        Create <b>{{ exp.display }}</b> demo session
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+</div>
+{% endblock content %}

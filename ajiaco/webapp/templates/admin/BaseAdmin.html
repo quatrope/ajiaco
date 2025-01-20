@@ -1,0 +1,87 @@
+{% extends "Base.html" %}
+
+{% block app_style %}
+<link rel="stylesheet" href="{{ url_for('static', path='simple_sidebar/simple-sidebar.css') }}">
+{% endblock app_style %}
+
+
+{% block pre_content %}
+<!-- Sidebar -->
+<div id="sidebar-wrapper">
+    <ul class="sidebar-nav">
+        <li class="sidebar-brand">
+            <a href="#">
+                {{AJC_EMOJI}} v.{{app.version}}
+            </a>
+        </li>
+        <li>
+            <a href="#">
+                <i class="fas fa-eye"></i> Demo
+            </a>
+        </li>
+        <li>
+            <a href="#">
+                <i class="fas fa-plus-circle"></i> Create a session
+            </a>
+        </li>
+        <li>
+            <a href="#">
+                <i class="fas fa-database"></i> Explore Data
+            </a>
+        </li>
+        <li></li>
+        <li>
+            <a href="#">
+                <i class="fas fa-life-ring"></i> Help
+            </a>
+        </li>
+        <li>
+            <a href="#">
+                <i class="fas fa-envelope"></i> Contact
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('about') }}">
+                <i class="fas fa-info-circle"></i> About Ajiaco
+            </a>
+        </li>
+    </ul>
+</div>
+<div>
+    <a href="#menu-toggle" class="btn btn-sidebar-toggle" id="menu-toggle">
+        <span class="menu-hide">
+            Ajiaco v.{{app.version}}
+            <i class="fas fa-angle-double-right"></i>
+        </span>
+        <span class="menu-show">
+            <i class="fas fa-angle-double-left"></i>
+        </span>
+    </a>
+</div>
+{% endblock %}
+
+{% block app_scripts %}
+<script>
+$(document).ready(function(){
+
+    var showSidebar = localStorage.getItem("ajc_show_sidebar") || 'true';
+    if(showSidebar === 'true')
+        $("#wrapper").addClass("toggled", 0);
+
+    $("#menu-toggle").click(function(e) {
+        e.preventDefault();
+        $("#wrapper").toggleClass("toggled").promise().done(function(){
+            if($("#wrapper").hasClass("toggled")){
+                $("#menu-toggle > .menu-show").show();
+                $("#menu-toggle > .menu-hide").hide();
+                localStorage["ajc_show_sidebar"] = 'true';
+            } else {
+                $("#menu-toggle > .menu-show").hide();
+                $("#menu-toggle > .menu-hide").show();
+                localStorage["ajc_show_sidebar"] = 'false';
+            }
+        });
+    });
+});
+</script>
+{% endblock app_scripts %}

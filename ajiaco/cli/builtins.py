@@ -11,7 +11,7 @@ from .register import AjcCommandRegister
 
 from ..utils import sysinfo
 
-from .cli_logo import CLI_LOGO
+from ..res import AJC_EMOJI
 
 
 CLI_BUILTINS = AjcCommandRegister("BUILTINS")
@@ -26,7 +26,7 @@ def version(app):
     the installed version or including version information in bug reports.
 
     """
-    rich.print(f"{CLI_LOGO} v.{app.version}")
+    rich.print(f"{AJC_EMOJI} v.{app.version}")
 
 
 @CLI_BUILTINS.register(name="reset-storage")
@@ -101,7 +101,9 @@ def show_storage_stamp(app):
 
 
 @CLI_BUILTINS.register()
-def webserver(app, host: str = "localhost", port: int = 2501):
+def webserver(
+    app, host: str = "localhost", port: int = 2501
+):
     """Start the Ajiaco web interface server.
 
     Launches a uvicorn web server that provides a web interface
@@ -109,13 +111,23 @@ def webserver(app, host: str = "localhost", port: int = 2501):
     accessible from other machines. The server runs until interrupted
     with Ctrl+C.
 
+    Note: Debug (app.debug) mode automatically enables auto-reload
+    functionality.
+
     """
-    now = dt.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
-    rich.print(f"​{CLI_LOGO}​ v.{app.version}")
+    now = dt.datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+    rich.print(f"​{AJC_EMOJI}​ v.{app.version}")
     rich.print(f"🦄 Starting Webserver - {now}")
     rich.print(rule.Rule())
 
-    return app.webapp.run(app, host=host, port=port)
+    conf = {
+        "host": host,
+        "port": port,
+        "reload": app.debug,
+        "app_dir": app.filepath.parent
+    }
+
+    return app.webapp.run(app, **conf)
 
 
 # =============================================================================
@@ -181,7 +193,7 @@ def _create_banner(app, slocals):
 
     banner_parts = (
         [""]
-        + [f"​{CLI_LOGO} v.{app.version}"]
+        + [f"{AJC_EMOJI} v.{app.version}"]
         + [f"📦 Running inside: '{app.app_path}'"]
         + ["🏷️  Variables:"]
         + lines

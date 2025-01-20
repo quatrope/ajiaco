@@ -1,0 +1,20 @@
+<h3>Links</h3>
+<table class="table table-hover table-condensed">
+    {% for subject in session.subjects %}
+    {% set subject_url = reverse_url('play', subject.code) %}
+    {% set full_subject_url = "{}://{}{}".format(request.protocol, request.host, subject_url) %}
+    <tr>
+        <td><b>Subject {{loop.index}}</b></td>
+        <td>
+            <a href="{{ subject_url }}" target="_blank">
+                {{ full_subject_url }}
+            </a>
+        </td>
+        <td>
+            <button class="btn btn-copy btn-sm btn-outline-secondary" data-clipboard-text="{{ full_subject_url }}">
+                <i class="fas fa-copy"></i> Copy to clipboard
+            </button>
+        </td>
+    </tr>
+    {% endfor %}
+</table>

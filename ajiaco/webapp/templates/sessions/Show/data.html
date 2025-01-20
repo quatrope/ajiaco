@@ -1,0 +1,209 @@
+{% set rounds_number = session.rounds|length %}
+
+{% set session_ef_number = session.get_ef_len() %}
+
+<div class="float-right">
+    <label><b>Download</b></label>
+    <div class="btn-group">
+        <a role="button" class="btn btn-sm btn-primary" href="{{ reverse_url('session_data_download', 'csv', session.code) }}">
+            CSV</a>
+        <a role="button" class="btn btn-sm btn-secondary" href="{{ reverse_url('session_data_download', 'json', session.code) }}">
+            JSON</a>
+    </div>
+</div>
+
+<h3>Session Data</h3>
+<div class="wrapper-scroll-x">
+<table class="table table-condensed table-bordered">
+    <thead class="thead-dark">
+        <tr>
+            <th>ID</th>
+            <th>Code</th>
+            <th>Experiment Name</th>
+            <th>Subjects Number</th>
+            <th>Is Demo</th>
+            <th>Stages Number</th>
+            {% for k in session.get_ef_schema_types() %}
+                <th>{{ ef2title(k) }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        <td data-model="Session" data-model-id="{{ session.id }}" data-model-field="id">
+            {{ session.id }}</td>
+        <td data-model="Session" data-model-id="{{ session.id }}" data-model-field="code">
+            {{ session.code }}</td>
+        <td data-model="Session" data-model-id="{{ session.id }}" data-model-field="experiment_name">
+            {{ session.experiment_name }}</td>
+        <td data-model="Session" data-model-id="{{ session.id }}" data-model-field="subjects_number">
+            {{ session.subjects_number }}</td>
+        <td data-model="Session" data-model-id="{{ session.id }}" data-model-field="demo">
+            {{ session.demo }}</td>
+        <td data-model="Session" data-model-id="{{ session.id }}" data-model-field="len_stages">
+            {{ session.len_stages }}</td>
+        {% for k in session.get_ef_schema_types() %}
+        <td data-model="Session" data-model-id="{{ session.id }}" data-model-field="{{ k }}">
+            {{ session.extra_fields.get(k, "") }}</td>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<h3>Subject Data</h3>
+<div class="wrapper-scroll-x">
+<table class="table table-hover table-condensed table-bordered">
+    <thead class="thead-dark">
+        <tr>
+            {# <!-- subject header --> #}
+            {# <!-- # + code + id + len(extra_fields) --> #}
+            {% set subject_col_span = 3 + session.subjects[0].get_ef_len() %}
+            <th colspan="{{subject_col_span}}" rowspan="2">Subject</th>
+
+            {% for round in session.rounds %}
+                {% set th_class = loop.cycle('', 'text-info') %}
+
+                {% set col_span = (
+                    2 + round.get_ef_len() +
+                    1 + round.groups[0].get_ef_len() +
+                    3 + round.roles[0].get_ef_len())%}
+                <th class="{{ th_class }}" colspan="{{ col_span }}" >{{ round.game.display }}</th>
+            {% endfor %}
+        </tr>
+       <tr>
+            {% for round in session.rounds %}
+                {% set th_class = loop.cycle('', 'text-info') %}
+
+                {# <!-- round header --> #}
+                {# <!-- id + number + len(extra_fields) --> #}
+                {% set round_col_span = 2 + round.get_ef_len() %}
+                <th class="{{ th_class }}" colspan="{{ round_col_span }}">Round</th>
+
+                {# <!-- group header --> #}
+                {# <!-- id + len(extra_fields) --> #}
+                {% set group_col_span = 1 + round.groups[0].get_ef_len() %}
+                <th class="{{ th_class }}" colspan="{{ group_col_span }}">Group</th>
+
+                {# <!-- roles header --> #}
+                {# <!-- id + number + in_group_number  + len(extra_fields) --> #}
+                {% set role_col_span = 3 + round.roles[0].get_ef_len() %}
+                <th class="{{ th_class }}" colspan="{{ role_col_span }}">Role</th>
+
+            {% endfor %}
+        </tr>
+        <tr>
+            <!-- subject fields header -->
+            <th>#</th>
+            <th>ID</th>
+            <th>Code</th>
+            {% for k in subject_ef %}
+                <th>{{ ef2title(k) }}</th>
+            {% endfor %}
+
+            {% for round in session.rounds %}
+                {% set th_class = loop.cycle('', 'text-info') %}
+
+                {# <!-- round fields header --> #}
+                <th class="{{ th_class }}">Number</th>
+                <th class="{{ th_class }}">ID</th>
+                {% for k in round.get_ef_schema_types() %}
+                <th class="{{ th_class }}">{{ ef2title(k) }}</th>
+                {% endfor %}
+
+                {# <!-- group fields header --> #}
+                <th class="{{ th_class }}">ID</th>
+                {% for k in round.groups[0].get_ef_schema_types() %}
+                <th class="{{ th_class }}">{{ ef2title(k) }}</th>
+                {% endfor %}
+
+                {# <!-- role fields header --> #}
+                <th class="{{ th_class }}">ID</th>
+                <th class="{{ th_class }}">Number</th>
+                <th class="{{ th_class }}">Number in Group</th>
+                {% for k in round.roles[0].get_ef_schema_types() %}
+                <th class="{{ th_class }}">{{ ef2title(k) }}</th>
+                {% endfor %}
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for subject in session.subjects %}
+        <tr>
+            <th>{{ loop.index }}</th>
+
+            <!-- subject fields -->
+            <td data-model="Subject" data-model-id="{{ subject.id }}" data-model-field="id">
+                {{ subject.id }}</td>
+            <td data-model="Subject" data-model-id="{{ subject.id }}" data-model-field="code">
+                {{ subject.code }}</td>
+            {% for k in subject_ef %}
+            <td data-model="Subject" data-model-id="{{ subject.id }}" data-model-field="{{ k }}">
+                {{ subject.extra_fields.get(k, "") }}</td>
+            {% endfor %}
+
+            {% for round in session.rounds %}
+                {% set td_class = loop.cycle('', 'text-info') %}
+                {% set role = round.role_of(subject) %}
+                {% set group = role.group %}
+
+                {# <!-- round fields --> #}
+                <td class="{{ td_class }}" data-model="Round" data-model-id="{{ round.id }}" data-model-field="number">
+                    {{ round.number }}</td>
+                <td class="{{ td_class }}" data-model="Round" data-model-id="{{ round.id }}" data-model-field="id">
+                    {{ round.id }}</td>
+                {% for k in round.get_ef_schema_types() %}
+                <td class="{{ td_class }}" data-model="Round" data-model-id="{{ round.id }}" data-model-field="{{ k }}">
+                    {{ round.extra_fields.get(k, "") }}</td>
+                {% endfor %}
+
+                {# <!-- group fields --> #}
+                <td class="{{ td_class }}" data-model="Group" data-model-id="{{ group.id }}" data-model-field="id">
+                    {{ group.id }}</td>
+                {% for k in group.get_ef_schema_types() %}
+                <td class="{{ td_class }}" data-model="Group" data-model-id="{{ group.id }}" data-model-field="{{ k }}">
+                    {{ group.extra_fields.get(k, "") }}</td>
+                {% endfor %}
+
+                {# <!-- role fields header --> #}
+                <td class="{{ td_class }}" data-model="Role" data-model-id="{{ role.id }}" data-model-field="id">
+                    {{ role.id }}</td>
+                <td class="{{ td_class }}" data-model="Role" data-model-id="{{ role.id }}" data-model-field="number">
+                    {{ role.number }}</td>
+                <td class="{{ td_class }}" data-model="Role" data-model-id="{{ role.id }}" data-model-field="number_in_group">
+                    {{ role.number_in_group }}</td>
+                {% for k in role.get_ef_schema_types() %}
+                <td class="{{ td_class }}" data-model="Role" data-model-id="{{ role.id }}" data-model-field="{{ k }}">
+                    {{ role.extra_fields.get(k, "") }}</td>
+                {% endfor %}
+
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<script>
+$(document).ready(function(){
+    {% set full_ws_url = "ws://{}{}".format(request.host, reverse_url('ws_data_update', session.code)) %}
+    var dataws = new WebSocket("{{ full_ws_url }}");
+
+    dataws.onmessage = function(evt){
+        var data = JSON.parse(evt.data);
+        var elems = $(
+            '[data-model="' + data.model + '"]' +
+            '[data-model-id="' + data.model_id + '"]');
+        for(var k in data.fields){
+            var value = data.fields[k];
+            if(value === true){
+                value = "True";
+            }
+            var $elem = elems.filter("[data-model-field='" + k + "']");
+            $elem.text(value);
+            $elem.addClass("glow");
+            $elem.delay(3010).queue(function(){
+                $elem.removeClass("glow").dequeue();
+            });
+        }
+    };
+});
+</script>

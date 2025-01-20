@@ -1,3 +1,4 @@
+import inspect
 import logging
 import pathlib
 
@@ -31,6 +32,8 @@ class AjcApplication:
 
     """
 
+    _created_at_frame: object = attrs.field(init=False, repr=False)
+
     filename: str = attrs.field(validator=valids.instance_of(str))
     secret: str = attrs.field(validator=valids.instance_of(str), repr=False)
     verbose: int = attrs.field(
@@ -39,6 +42,7 @@ class AjcApplication:
             valids.instance_of(int), valids.ge(0), valids.le(3)
         ),
     )
+    debug: bool = attrs.field(converter=bool)
 
     logger: logging.Logger = attrs.field(init=False, repr=False)
 
@@ -58,9 +62,14 @@ class AjcApplication:
 
     # DEFAULTS ================================================================
 
+    @_created_at_frame.default
+    def _created_at_frame_default(self):
+        # two f_back for the attrs.__init__
+        return inspect.currentframe().f_back.f_back
+
     @storage.default
     def _storage_default(self):
-        path = self.app_path / "database.sqlite3"
+        path = self.filepath.parent / "database.sqlite3"
 
         log_level = VERBOSE_TO_LOGGING.get(self.verbose, logging.CRITICAL)
         echo = log_level <= logging.INFO
@@ -69,7 +78,7 @@ class AjcApplication:
 
     @commands.default
     def _commands_default(self):
-        name = f"Commands of '{self.app_path}'"
+        name = f"Commands of '{self.filepath}'"
         return AjcCommandRegister(name=name, not_available=CLI_BUILTINS)
 
     @logger.default
@@ -83,7 +92,7 @@ class AjcApplication:
 
     @webapp.default
     def _webapp_default(self):
-        return AjcWebApp()
+        return AjcWebApp(app=self)
 
     @_experiment_sessions_defaults.default
     def _experiment_sessions_default(self):
@@ -92,15 +101,21 @@ class AjcApplication:
     # API =====================================================================
 
     @property
+    def filepath(self):
+        return pathlib.Path(self.filename)
+
+    @property
+    def icfn(self):
+        for k, v in self._created_at_frame.f_locals.items():
+            if v is self:
+                return k
+        raise ValueError("Unable to find instance creation name")
+
+    @property
     def version(self):
         from . import VERSION
 
         return VERSION
-
-    @property
-    def app_path(self):
-        path = pathlib.Path(self.filename)
-        return path.absolute().parent
 
     @property
     def experiment_sessions_default(self):
@@ -114,49 +129,3 @@ class AjcApplication:
     def run_from_command_line(self):
         cli_manager = AjcCLIManager(commands=[self.commands, CLI_BUILTINS])
         return cli_manager.parse_and_run(app=self)
-
-    # SCHEMA = {
-
-    #     "auth_level": vol.In(AUTH_LEVELS),
-    #     "admin_username": str,
-    #     "admin_password": str,
-    #     "currency": vol.In(CURRENCIES),
-    #     "language": vol.In(LANGUAGES),
-    #     "database": db.Database,
-    #     "session_defaults": dict,
-    #     "commands": cli.CommandRegister,
-    #     "experiments": OrderedDict}
-
-    # FROZEN_SCHEMA = True
-
-    # def __repr__(self):
-    #     return f"Project(prjpath='{self.prjpath()}', debug={self.debug})"
-
-    # def __init__(self, filename, secret, debug=True, dbpath=None,
-    #              auth_level=None, admin_username=None,
-    #              admin_password=None, currency=None, language=None):
-    #     self.filename = filename
-    #     self.secret = secret
-    #     self.debug = debug or env.env("AJIACO_DEBUG", c=bool, d=False)
-
-    #     self.auth_level = (
-    #         auth_level or env.env("AJIACO_AUTH_LEVEL", d=AUTH_LEVEL_DEMO))
-    #     self.admin_username = (
-    #         admin_username or env.env("AJIACO_ADMIN_USERNAME", d="admin"))
-    #     self.admin_password = passenc.hash(
-    #         admin_password or env.env("AJIACO_ADMIN_PASSWORD", d="admin"))
-
-    #     self.currency = (
-    #         currency or env.env("AJIACO_CURRENCY", d=CURRENCY_POINTS))
-    #     self.language = language or env.env("AJIACO_LANGUAGE", d=LANG_EN)
-
-    #     if dbpath is None:
-    #         default = os.path.join(self.prjpath(), "database.sqlite3")
-    #         dbpath = env.env("AJIACO_DBPATH", d=f"sqlite:///{default}")
-
-    #     self.database = db.Database(dbpath, self)
-
-    #     self.session_defaults = {}
-
-    #     self.commands = cli.CommandRegister("Customs")
-    #     self.experiments = OrderedDict()

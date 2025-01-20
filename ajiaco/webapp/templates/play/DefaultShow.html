@@ -1,0 +1,54 @@
+{% extends "play/BaseShow.html" %}
+
+{% block styles %}
+<style>
+{% for style in page.style_parts %}
+{{ style|safe }}
+{% endfor %}
+</style>
+{% endblock %}
+
+
+{% block form %}
+<div id="body-parts">
+    {% for ptype, part in page.render_parts %}
+        {% if ptype == "form" %}
+            {% if part.errors %}
+            <div class="formfield-container alert alert-danger">
+                <ul>
+                    {% for err in part.errors %}
+                    <li>{{ err }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+            <div class="formfield-container">
+            {% endif %}
+                {{ part.label }} {{ part }}
+            </div>
+        {% else %}
+            {{ part|safe }}
+        {% endif %}
+    {% endfor %}
+</div>
+{% if page.submit_text is not none %}
+<div>
+    <button class="btn btn-primary" type="submit" id="submit-button">
+        {{ page.submit_text }}
+    </button>
+</div>
+{% endif %}
+{% endblock form %}
+
+
+{% block scripts %}
+<div id="js-parts">
+    {% for script in page.js_parts %}
+    {{ script|safe }}
+    {% endfor %}
+</div>
+<div id="py-parts">
+    {% for script in page.py_parts %}
+    {{ script|safe }}
+    {% endfor %}
+</div>
+{% endblock scripts %}

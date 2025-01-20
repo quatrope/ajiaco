@@ -1,0 +1,18 @@
+.wrapper-scroll-x {
+  display: block;
+  max-height: 2000px;
+  overflow-y: auto;
+  -ms-overflow-style: -ms-autohiding-scrollbar;
+}
+
+/* GLOW */
+@keyframes glow {
+    0% {background-color: white;}
+    50% {background-color: #ffc107;}
+    100% {background-color: white;}
+}
+
+.glow{
+    animation-name: glow;
+    animation-duration: 3s;
+}

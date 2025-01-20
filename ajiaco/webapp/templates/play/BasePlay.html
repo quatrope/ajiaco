@@ -1,0 +1,10 @@
+{% extends "Base.html" %}
+
+{% block title %}
+    {{ page.page_title }}
+{% endblock %}
+
+
+{% block page_title %}
+    {{ page.page_title|safe }}
+{% endblock %}
